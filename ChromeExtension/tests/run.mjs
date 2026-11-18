@@ -24,6 +24,7 @@ import {
   failGoalCheckInReservation,
   GOAL_CHECKIN_MESSAGE,
   GOAL_CHECKIN_MIN_GAP_MS,
+  goalCheckInMessage,
   meaningfulGoalPlaybackSeconds,
   normalizeSettings,
   interactionDisposition,
@@ -514,6 +515,18 @@ await test("nudge cooldown and hourly limit are deterministic", () => {
   equal(engine.evaluate({ ...context, nowMs: BASE + 700_000 }, settings).suppression, "hourly_limit");
 });
 
+await test("nudge copy uses only safe aggregate context", () => {
+  const settings = { trackingEnabled: true, notificationsEnabled: true, dailyLimitSeconds: 300 };
+  const context = { nowMs: BASE, pageSite: "www.youtube.com", dailyActiveSeconds: 610, activeSessionSeconds: 60, distinctSessionsLast20Minutes: 1, playbackRate: 1, positionSeconds: 1, mediaTitle: "Private medical concern" };
+  const daily = new NudgeEngine().evaluate(context, settings).nudge;
+  assert(daily.message.includes("daily target"));
+  assert(daily.title.includes("10 minutes"));
+  assert(!JSON.stringify(daily).includes(context.mediaTitle));
+  const otherSite = new NudgeEngine().evaluate({ ...context, pageSite: "netflix.com" }, settings).nudge;
+  assert(otherSite.message.includes("10 minutes"));
+  assert(!otherSite.title.includes("algorithm"));
+});
+
 function goalProgressEvents({ id = "goal", url = "https://www.youtube.com/watch?v=goal", startMs = BASE, seconds = 15, tabID = 4, frameID = 0, sessionID = "goal-session", playerID = "goal-player", frameSite = "www.youtube.com", pageSite = "www.youtube.com" } = {}) {
   const shared = { url, tabID, frameID, sessionID, playerID, frameSite, pageSite, mediaTitle: "Goal video" };
   return [
@@ -533,13 +546,31 @@ await test("goal check-in fires at 15 meaningful seconds exactly once", () => {
   const threshold = goalProgressEvents({ id: "threshold", seconds: 15 });
   const first = evaluateGoalCheckIn({ events: threshold, event: threshold.at(-1), settings, state: belowDecision.state, nowMs: BASE + 15_000 });
   equal(first.shouldPrompt, true);
-  equal(first.message, GOAL_CHECKIN_MESSAGE);
-  equal(first.message, "Hope you’re clear on your goal for watching this video.");
+  equal(first.message, goalCheckInMessage(threshold.at(-1), threshold));
   const completedState = completeGoalCheckInReservation(first.state, first.reservation, BASE + 15_001);
   const restartedState = JSON.parse(JSON.stringify(completedState));
   const repeated = evaluateGoalCheckIn({ events: [...threshold, event({ eventID: "threshold-repeat", sessionID: "goal-session", playerID: "goal-player", url: "https://www.youtube.com/watch?v=goal", mediaTitle: "Goal video", occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" })], event: event({ eventID: "threshold-target", sessionID: "goal-session", playerID: "goal-player", url: "https://www.youtube.com/watch?v=goal", mediaTitle: "Goal video", occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" }), settings, state: restartedState, nowMs: BASE + 20_000 });
   equal(repeated.shouldPrompt, false);
   equal(repeated.suppression, "already_processed");
+});
+
+await test("goal check-in copy varies with context without echoing titles", () => {
+  equal(goalCheckInMessage(), GOAL_CHECKIN_MESSAGE);
+  const tutorial = goalProgressEvents({ id: "learning", url: "https://www.youtube.com/watch?v=learning" }).map((item) => ({ ...item, mediaTitle: "How to discuss a private medical concern" }));
+  const learningMessage = goalCheckInMessage(tutorial.at(-1), tutorial);
+  assert(learningMessage.includes("tutorial") || learningMessage.includes("Learning"));
+  assert(!learningMessage.includes("private medical concern"));
+  equal(learningMessage, goalCheckInMessage(tutorial.at(-1), tutorial));
+
+  const streaming = goalProgressEvents({ id: "streaming", url: "https://www.netflix.com/watch/123", frameSite: "www.netflix.com", pageSite: "www.netflix.com" });
+  assert(/scene|plot twist/i.test(goalCheckInMessage(streaming.at(-1), streaming)));
+
+  const rapid = [
+    ...goalProgressEvents({ id: "one", url: "https://www.youtube.com/watch?v=one", sessionID: "one", startMs: BASE }),
+    ...goalProgressEvents({ id: "two", url: "https://www.youtube.com/watch?v=two", sessionID: "two", startMs: BASE + 20_000 }),
+    ...goalProgressEvents({ id: "three", url: "https://www.youtube.com/watch?v=three", sessionID: "three", startMs: BASE + 40_000 })
+  ];
+  assert(/feed|tasting menu/i.test(goalCheckInMessage(rapid.at(-1), rapid)));
 });
 
 await test("goal check-in suppression crosses the threshold without later backfill", () => {
@@ -729,13 +760,13 @@ await test("realistic seek then 5-second heartbeat pipeline acknowledges one goa
     state = decision.state;
     if (!decision.shouldPrompt) continue;
     prompts += 1;
-    const delivered = await deliverGoalCheckIn({ browser, event: current, isAllowed: async () => isGoalPlaybackActive(pipeline.slice(0, index + 1), current, current.occurredAtMs) });
+    const delivered = await deliverGoalCheckIn({ browser, event: current, isAllowed: async () => isGoalPlaybackActive(pipeline.slice(0, index + 1), current, current.occurredAtMs), message: decision.message });
     assert(delivered);
     state = completeGoalCheckInReservation(state, decision.reservation, current.occurredAtMs + 1);
   }
   equal(prompts, 1);
   equal(calls.filter((item) => item.type === "SHOW_TOAST").length, 1);
-  equal(calls.filter((item) => item.type === "SHOW_TOAST" && item.text === GOAL_CHECKIN_MESSAGE).length, 1);
+  equal(calls.filter((item) => item.type === "SHOW_TOAST" && item.text === goalCheckInMessage(pipeline[5], pipeline.slice(0, 6))).length, 1);
 });
 
 await test("analysis job survives JSON restart and resumes safely", () => {

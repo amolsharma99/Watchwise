@@ -281,8 +281,7 @@ assert(sidepanel_js.include?("url.protocol === \"https:\""), "Video breakdown li
 assert(sidepanel_js.include?("link.rel = \"noopener noreferrer\""), "Video breakdown links lack safe opener isolation")
 assert(panel.include?("rows add up to the overall total"), "Per-video overlap semantics are not disclosed")
 
-goal_message = "Hope you’re clear on your goal for watching this video."
-assert(goal_checkin.include?(goal_message), "Exact goal check-in message is missing")
+assert(goal_checkin.include?("export function goalCheckInMessage") && goal_checkin.include?("GOAL_CHECKIN_MESSAGE"), "Context-aware goal check-in copy is missing")
 assert(goal_checkin.include?("GOAL_CHECKIN_THRESHOLD_SECONDS = 15") && goal_checkin.include?("GOAL_CHECKIN_MIN_GAP_MS = 60_000"), "Goal threshold or anti-spam gap is incorrect")
 assert(!goal_checkin.match?(/HOURLY_LIMIT|hourly_limit/), "Goal check-in has an unauthorized hourly cap")
 assert(goal_checkin.include?("MAX_PROCESSED_IDENTITIES = 200") && goal_checkin.include?("PROCESSED_RETENTION_MS = 24 * 60 * 60_000"), "Goal processed identity retention is not bounded to 24h/200")
@@ -295,7 +294,8 @@ assert(goal_checkin.include?("event.tabID !== targetEvent.tabID") && goal_checki
 assert(goal_checkin.include?("isExcludedSite(event.pageSite, settings) || isExcludedSite(event.frameSite, settings)"), "Goal suppression does not cover both frame and page sites")
 assert(goal_checkin.match?(/if \(suppression\).*?nextState\.processed.*?return Object\.freeze/m), "Suppressed goal threshold is not marked processed")
 assert(goal_checkin.match?(/suppression: "cadence".*?state: Object\.freeze\(nextState\)/m), "Cadence-blocked goal does not remain pending")
-assert(goal_checkin.include?("type: \"SHOW_TOAST\", text: GOAL_CHECKIN_MESSAGE, priority: \"goal_checkin\"") && goal_checkin.include?("response?.shown === true") && !goal_checkin.include?("actionLabel"), "Goal toast does not require the exact acknowledged priority message")
+assert(goal_checkin.include?("type: \"SHOW_TOAST\", text: message, priority: \"goal_checkin\"") && goal_checkin.include?("response?.shown === true") && !goal_checkin.include?("actionLabel"), "Goal toast does not require the acknowledged context message")
+assert(background.include?("message: decision.message") && background.include?("message: reservation.message"), "Goal copy is not carried from evaluation to delivery")
 assert(!goal_checkin.include?("browser.notifications") && !goal_checkin.include?("nudge:goal:"), "Goal check-in still creates a native notification")
 assert(content.include?("message.priority === \"goal_checkin\"") && content.include?("{ ok: true, shown }") && content.include?("fullscreenRoot || document.documentElement") && content.include?("fullscreenRoot instanceof HTMLVideoElement") && content.include?("fullscreenRoot instanceof HTMLIFrameElement"), "Content toast does not acknowledge actual/container-fullscreen priority display")
 assert(goal_checkin.include?("export function isGoalPlaybackActive") && goal_checkin.include?("nowMs - latest.occurredAtMs <= freshnessMs"), "Goal delivery does not require fresh active playback")
@@ -309,7 +309,7 @@ assert(background.include?("const streamEvents = events.filter((item) => playbac
 assert(background.include?("GOAL_CHECKIN_MIN_GAP_MS") && background.include?("goalLast") && background.include?("lastInterventionAtMs: stored[NUDGE_STATE_KEY]?.emittedAtMs"), "Cross-nudge 60-second gap is not enforced in both directions")
 assert(background.match?(/function interventionsAllowed.*?settings\.trackingEnabled === true/m), "Intervention delivery does not recheck tracking consent")
 assert(background.scan("generation !== historyGeneration").length >= 10 && background.scan("revision !== settingsRevision").length >= 8, "Delivery/delete/settings race guards regressed")
-assert(readme.include?(goal_message) && readme.include?("once per video identity in 24 hours") && readme.include?("60-second anti-spam gap"), "Goal timing/dedupe/cadence behavior is undocumented")
+assert(readme.include?("wording varies by broad context") && readme.include?("once per video identity in 24 hours") && readme.include?("60-second anti-spam gap"), "Goal timing/dedupe/cadence behavior is undocumented")
 assert(readme.include?("in-page only") && readme.include?("removes all Chrome/macOS native banners") && readme.include?("sends no out-of-browser alert"), "Native-notification removal/analysis fallback is undocumented")
 
 puts "Chrome integration privacy/restart/delete/notification contract: PASS"

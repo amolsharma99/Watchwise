@@ -8,6 +8,24 @@ export const NUDGE_KINDS = Object.freeze({
   SKIP_TO_MAIN_POINT: "skip_to_main_point"
 });
 
+function nudgeCopy(kind, context) {
+  const minutes = Math.max(1, Math.floor(context.dailyActiveSeconds / 60));
+  const sessionMinutes = Math.max(1, Math.floor(context.activeSessionSeconds / 60));
+  const isYouTube = /(?:^|\.)youtube\.com$/.test(String(context.pageSite || ""));
+  if (kind === NUDGE_KINDS.DAILY_LIMIT) {
+    return isYouTube
+      ? ["You have watched about " + minutes + " minutes today.", "The algorithm has a sequel ready. Your daily target says this is a fine place for credits."]
+      : ["Your viewing target has clocked out.", "You have watched about " + minutes + " minutes today. Want to join it?"];
+  }
+  if (kind === NUDGE_KINDS.RABBIT_HOLE) {
+    return ["The video parade is growing.", "A few videos in quick succession. Was there one thing you came to find?"];
+  }
+  if (kind === NUDGE_KINDS.LONG_SESSION) {
+    return ["Still on the clock?", "About " + sessionMinutes + " minutes in this stretch. This video has had its audition; is it still worth your time?"];
+  }
+  return ["A quick check-in", "Is this still helping with your plan?"];
+}
+
 export class NudgeEngine {
   constructor({ cooldownMs = 10 * 60_000, hourlyLimit = 3, emittedAtMs = [] } = {}) {
     this.cooldownMs = Math.max(0, cooldownMs);
@@ -31,11 +49,11 @@ export class NudgeEngine {
 
     let nudge = null;
     if (context.dailyActiveSeconds >= settings.dailyLimitSeconds) {
-      nudge = this.#nudge(NUDGE_KINDS.DAILY_LIMIT, "Daily viewing target reached", "You’ve reached today’s viewing target. Pause, or continue intentionally.", nowMs);
+      nudge = this.#contextNudge(NUDGE_KINDS.DAILY_LIMIT, context, nowMs);
     } else if (context.distinctSessionsLast20Minutes >= 5) {
-      nudge = this.#nudge(NUDGE_KINDS.RABBIT_HOLE, "A quick check-in", "You’ve opened several videos recently. Is the next one still serving your goal?", nowMs);
+      nudge = this.#contextNudge(NUDGE_KINDS.RABBIT_HOLE, context, nowMs);
     } else if (context.activeSessionSeconds >= settings.longSessionSeconds) {
-      nudge = this.#nudge(NUDGE_KINDS.LONG_SESSION, "Still worth your time?", "You’ve been watching continuously. Take a breath, or keep going intentionally.", nowMs);
+      nudge = this.#contextNudge(NUDGE_KINDS.LONG_SESSION, context, nowMs);
     } else {
       nudge = this.#aiNudge(context, nowMs);
     }
@@ -73,6 +91,11 @@ export class NudgeEngine {
 
   #nudge(kind, title, message, nowMs, suggestedTimestampSeconds = null) {
     return Object.freeze({ kind, title, message, createdAtMs: nowMs, suggestedTimestampSeconds });
+  }
+
+  #contextNudge(kind, context, nowMs) {
+    const [title, message] = nudgeCopy(kind, context);
+    return this.#nudge(kind, title, message, nowMs);
   }
 
   #suppressed(suppression) { return Object.freeze({ nudge: null, suppression }); }

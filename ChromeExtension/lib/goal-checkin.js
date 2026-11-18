@@ -6,6 +6,49 @@ export const GOAL_CHECKIN_MESSAGE = "Hope you’re clear on your goal for watchi
 export const GOAL_CHECKIN_THRESHOLD_SECONDS = 15;
 export const GOAL_CHECKIN_MIN_GAP_MS = 60_000;
 
+const GENERAL_CHECK_INS = Object.freeze([
+  "A tiny note from Future You: what did you come here to find?",
+  "The play button is persuasive. Is this video helping with your plan?",
+  "You owe the algorithm nothing. Is the next minute worth yours?",
+  "Respectfully begging: if this is not your mission, close the tab before it adopts you.",
+  "Autoplay has applied for overtime. Please do not approve it by accident.",
+  GOAL_CHECKIN_MESSAGE
+]);
+const LEARNING_CHECK_INS = Object.freeze([
+  "Learning mission check: do you know the answer you came for? Skip ahead if it is still hiding.",
+  "A tutorial can take its time. Your question does not have to. Is this the useful part yet?"
+]);
+const STREAMING_CHECK_INS = Object.freeze([
+  "The next scene will wait. Did you mean to settle in for this one?",
+  "A little plot twist: you can pause here and come back when you really want to watch."
+]);
+const RAPID_CHECK_INS = Object.freeze([
+  "A few videos in a row? The feed has a plan. Do you?",
+  "The algorithm brought a tasting menu. Please, you can leave the restaurant."
+]);
+
+function stableVariant(identity, count) {
+  let hash = 0;
+  for (const character of identity) hash = (Math.imul(hash, 31) + character.codePointAt(0)) >>> 0;
+  return hash % count;
+}
+
+export function goalCheckInMessage(event, events = []) {
+  if (!event) return GOAL_CHECKIN_MESSAGE;
+  const identity = goalCheckInIdentity(event);
+  const recentIdentities = new Set(events.filter((item) => (
+    item.occurredAtMs <= event.occurredAtMs && item.occurredAtMs >= event.occurredAtMs - 20 * 60_000
+      && PLAYING_STATES.has(item.state) && item.isVisible && item.isTabActive
+  )).map(goalCheckInIdentity));
+  const site = String(event.pageSite || event.frameSite || "").toLowerCase();
+  const title = String(event.mediaTitle || "");
+  let choices = GENERAL_CHECK_INS;
+  if (recentIdentities.size >= 3) choices = RAPID_CHECK_INS;
+  else if (youtubeVideoIdentity(event.url) && /\b(?:how to|tutorial|explained|beginner|guide to)\b/i.test(title)) choices = LEARNING_CHECK_INS;
+  else if (/(?:^|\.)(?:netflix\.com|hotstar\.com|disneyplus\.com)$/.test(site)) choices = STREAMING_CHECK_INS;
+  return choices[stableVariant(identity, choices.length)];
+}
+
 const PLAYING_STATES = new Set(["playing", "heartbeat", "rate_changed"]);
 const PROCESSED_RETENTION_MS = 24 * 60 * 60_000;
 const MAX_PROCESSED_IDENTITIES = 200;
@@ -179,7 +222,7 @@ export function evaluateGoalCheckIn({ events, event, settings, state = {}, nowMs
     identity,
     reservation,
     meaningfulSeconds,
-    message: GOAL_CHECKIN_MESSAGE,
+    message: goalCheckInMessage(event, events),
     state: Object.freeze(nextState)
   });
 }
@@ -210,11 +253,11 @@ export function failGoalCheckInReservation(rawState, reservation, nowMs = Date.n
   return Object.freeze(state);
 }
 
-export async function deliverGoalCheckIn({ browser, event, isAllowed }) {
+export async function deliverGoalCheckIn({ browser, event, isAllowed, message = goalCheckInMessage(event) }) {
   if (!(await isAllowed())) return false;
   let toastDelivered = false;
   try {
-    const response = await browser.tabs.sendMessage(event.tabID, { type: "SHOW_TOAST", text: GOAL_CHECKIN_MESSAGE, priority: "goal_checkin" }, { frameId: event.frameID });
+    const response = await browser.tabs.sendMessage(event.tabID, { type: "SHOW_TOAST", text: message, priority: "goal_checkin" }, { frameId: event.frameID });
     toastDelivered = response?.shown === true;
   } catch {}
   if (!toastDelivered) return false;

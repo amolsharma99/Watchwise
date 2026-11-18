@@ -15,6 +15,7 @@ activity = source[active_start...active_finish].sub("export function", "function
 
 fixture = <<~JAVASCRIPT
   const GOAL_CHECKIN_MESSAGE = "Hope you’re clear on your goal for watching this video.";
+  function goalCheckInMessage() { return GOAL_CHECKIN_MESSAGE; }
   function playbackStreamKey(event) { return `${event.tabID}:${event.frameID}:${event.playerID}:${event.sessionID}`; }
   function youtubeVideoIdentity(url) {
     const value = String(url);
@@ -49,11 +50,12 @@ fixture = <<~JAVASCRIPT
   }
 
   const normal = mockBrowser();
-  assertDelivery(await deliverGoalCheckIn({ browser: normal, event, isAllowed: async () => true }), "normal delivery did not succeed");
+  const dynamicMessage = "A tiny note from Future You: what did you come here to find?";
+  assertDelivery(await deliverGoalCheckIn({ browser: normal, event, isAllowed: async () => true, message: dynamicMessage }), "normal delivery did not succeed");
   const toast = normal.calls.filter((call) => call.kind === "tab" && call.message.type === "SHOW_TOAST");
   const notice = normal.calls.filter((call) => call.kind === "notification");
   assertDelivery(toast.length === 1 && notice.length === 0, "goal delivery was not exactly one in-page toast with no native notification");
-  assertDelivery(toast[0].message.text === GOAL_CHECKIN_MESSAGE && toast[0].message.priority === "goal_checkin" && Object.keys(toast[0].message).length === 3, "toast body/priority was not the exact goal message contract");
+  assertDelivery(toast[0].message.text === dynamicMessage && toast[0].message.priority === "goal_checkin" && Object.keys(toast[0].message).length === 3, "toast body/priority did not preserve the chosen goal message");
 
   const suppressed = mockBrowser();
   assertDelivery(!(await deliverGoalCheckIn({ browser: suppressed, event, isAllowed: async () => false })), "suppressed delivery reported success");

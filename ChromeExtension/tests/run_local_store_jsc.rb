@@ -41,6 +41,9 @@ Dir.mktmpdir("watchwise-local-dynamic") do |stage|
     const activeSettings = { ...sanitized, quietHoursEnabled: false, movieModeUntilMs: null, snoozedUntilMs: null };
     const decision = engine.evaluate({ nowMs: now, pageSite: "video.example", dailyActiveSeconds: 1900, activeSessionSeconds: 0, distinctSessionsLast20Minutes: 1 }, activeSettings, 0);
     check(decision.nudge?.kind === "daily_limit", "local daily nudge missing");
+    check(decision.nudge.message.includes("31 minutes") && decision.nudge.title.includes("clocked out"), "local daily copy did not use aggregate context");
+    const youtubeCopy = new NudgeEngine().evaluate({ nowMs: now, pageSite: "www.youtube.com", dailyActiveSeconds: 1900, activeSessionSeconds: 0, distinctSessionsLast20Minutes: 1, mediaTitle: "Private health question" }, activeSettings, 0).nudge;
+    check(youtubeCopy.title.includes("31 minutes") && youtubeCopy.message.includes("sequel") && !JSON.stringify(youtubeCopy).includes("Private health question"), "local context copy leaked title or missed site variation");
     const silenced = new NudgeEngine().evaluate({ nowMs: now, pageSite: "video.example", dailyActiveSeconds: 9999, activeSessionSeconds: 0, distinctSessionsLast20Minutes: 1 }, { ...activeSettings, notificationsEnabled: false }, 0);
     check(silenced.nudge === null && silenced.suppression === "notifications_off", "local alert suppression failed");
     check(youtubeVideoIdentity("https://www.youtube.com/shorts/abc")?.videoKey === "youtube:abc", "shared YouTube identity missing");

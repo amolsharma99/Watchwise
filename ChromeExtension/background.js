@@ -440,7 +440,7 @@ async function maybeGoalCheckIn(event, generation = historyGeneration) {
     });
     await localSet({ [GOAL_CHECK_STATE_KEY]: decision.state });
     if (decision.shouldPrompt && generation === historyGeneration && revision === settingsRevision) {
-      reservation = { generation, revision, ...decision.reservation };
+      reservation = { generation, revision, ...decision.reservation, message: decision.message };
     }
   });
   if (!reservation) return false;
@@ -455,7 +455,7 @@ async function maybeGoalCheckIn(event, generation = historyGeneration) {
       && interventionsAllowed(currentSettings, nowMs, event.pageSite, event.frameSite)
       && isGoalPlaybackActive(recentEvents, event, nowMs);
   };
-  const delivered = await deliverGoalCheckIn({ browser: chrome, event, isAllowed: stillAllowed });
+  const delivered = await deliverGoalCheckIn({ browser: chrome, event, isAllowed: stillAllowed, message: reservation.message });
   await withDataMutation(async () => {
     if (generation !== historyGeneration) return;
     const stored = await localGet(GOAL_CHECK_STATE_KEY);
