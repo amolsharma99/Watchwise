@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Watchwise",
+  "version": "0.3.6",
+  "description": "Private, intentional video-watching insights with optional Gemini analysis.",
+  "permissions": [
+    "alarms",
+    "downloads",
+    "notifications",
+    "scripting",
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": ["https://*/*"],
+  "incognito": "not_allowed",
+  "icons": { "128": "assets/icon128.png" },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open Watchwise",
+    "default_icon": { "128": "assets/icon128.png" }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://*/*"],
+      "js": ["content.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Watchwise local AI trial</title>
+  <link rel="stylesheet" href="nano-pilot.css">
+</head>
+<body>
+  <main>
+    <header><span class="mark">W</span><div><p class="eyebrow">Private trial</p><h1>Test Chrome's local AI</h1></div></header>
+    <p>This trial uses the public, English auto-generated transcript of <a href="https://www.youtube.com/watch?v=hBzwILrci60" target="_blank" rel="noopener">Harsha Bhogle looks ahead to the Test series</a>. It does not send the transcript to Gemini API or change Watchwise settings.</p>
+    <section>
+      <h2>Model readiness</h2>
+      <p id="summarizerStatus" role="status">Checking Summarizer…</p>
+      <p id="promptStatus" role="status">Checking Prompt API…</p>
+    </section>
+    <section>
+      <h2>Summary</h2>
+      <button id="summarize" disabled>Summarise transcript locally</button>
+      <pre id="summaryOutput" aria-live="polite"></pre>
+    </section>
+    <section>
+      <h2>Usefulness assessment</h2>
+      <p>Based on spoken content only. This cannot verify cricket claims or judge visuals.</p>
+      <button id="assess" disabled>Assess transcript locally</button>
+      <pre id="assessmentOutput" aria-live="polite"></pre>
+    </section>
+  </main>
+  <script type="module" src="nano-pilot.js"></script>
+</body>
+</html>

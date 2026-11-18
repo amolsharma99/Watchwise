@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Watchwise",
+  "version": "0.1.0",
+  "description": "Private, intentional video-watching insights for the Watchwise Mac app.",
+  "permissions": ["storage", "nativeMessaging"],
+  "host_permissions": [
+    "https://*/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "Watchwise controls",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [{
+    "matches": [
+      "https://*/*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_idle",
+    "all_frames": true
+  }],
+  "incognito": "not_allowed"
+}

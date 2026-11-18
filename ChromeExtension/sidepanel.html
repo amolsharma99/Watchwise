@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Watchwise</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark" aria-hidden="true">W</span><div><strong>Watchwise</strong><span id="buildVersion">Watch with intent · loading version</span></div></div>
+    <button id="refresh" class="icon-button" title="Refresh dashboard" aria-label="Refresh dashboard">↻</button>
+  </header>
+
+  <main>
+    <section id="onboarding" class="card onboarding" hidden>
+      <p class="eyebrow">Private by default</p>
+      <h1>Understand your viewing without recording your screen.</h1>
+      <p>Watchwise needs access to HTTPS pages so it can detect visible HTML5 video elements across sites and frames. It records only title, URL, site, playback position, duration, speed, state and time after you opt in.</p>
+      <ul class="privacy-list">
+        <li>No pixels, audio, captions, page body or cookies</li>
+        <li>History stays in this browser’s IndexedDB</li>
+        <li>With AI consent and your saved key, new YouTube videos are analysed automatically and may use paid Gemini quota</li>
+      </ul>
+      <label class="check"><input id="onboardTracking" type="checkbox"><span>Enable local video tracking</span></label>
+      <label class="check"><input id="onboardAI" type="checkbox"><span>Allow optional Gemini analysis of public YouTube videos</span></label>
+      <button id="finishOnboarding" class="button primary">Continue</button>
+    </section>
+
+    <div id="app" hidden>
+      <nav class="tabs" aria-label="Watchwise sections">
+        <button class="tab active" data-panel="overview">Overview</button>
+        <button class="tab" data-panel="analyse">Analyse</button>
+        <button class="tab" data-panel="settings">Settings</button>
+      </nav>
+
+      <section id="overview" class="panel active" aria-labelledby="overview-title">
+        <div class="section-heading"><div><p class="eyebrow">Your attention</p><h1 id="overview-title">Today</h1></div><span id="trackingPill" class="pill off">Tracking off</span></div>
+        <div class="metric-grid">
+          <article class="metric card"><span>Active watching</span><strong id="todayTime">0m</strong><small>Time spent today</small></article>
+          <article class="metric card"><span>Videos started</span><strong id="todayStarted">0</strong><small>Played for 3+ seconds</small></article>
+        </div>
+        <div class="week-summary card"><span>This week</span><strong id="weekTime">0m</strong><small id="weekVideos">0 starts</small><small id="weekComparison" hidden></small></div>
+        <section class="card">
+          <div class="card-title"><h2>Top sites</h2><span>Today</span></div>
+          <div id="sites" class="site-list"><p class="empty">No viewing recorded yet.</p></div>
+        </section>
+        <section class="card">
+          <div class="card-title breakdown-title"><h2>Video breakdown</h2><div class="range-toggle" aria-label="Video breakdown period"><button class="active" data-video-range="today">Today</button><button data-video-range="week">Week</button></div></div>
+          <details class="method-note"><summary>How time is counted</summary><p>Simultaneous time is shared across active videos, so rows add up to the overall total.</p></details>
+          <div id="videoBreakdown" class="video-list"><p class="empty">No watched videos yet.</p></div>
+        </section>
+        <section class="card intent-card">
+          <div><h2>Need quiet time?</h2><p>Movie Mode silences nudges and AI suggestions while local viewing totals continue.</p></div>
+          <button id="movieModeQuick" class="button subtle">Movie Mode · 2h</button>
+        </section>
+      </section>
+
+      <section id="analyse" class="panel" aria-labelledby="analyse-title">
+        <p class="eyebrow">Automatic + manual</p><h1 id="analyse-title">Analyse a public YouTube video</h1>
+        <p class="lede">With AI consent and a saved key, Gemini analyses public YouTube videos automatically after you start watching. Turn this off in Settings, or analyse a URL manually below. Requests may use paid API quota.</p>
+        <form id="analysisForm" class="card form-card">
+          <label for="analysisURL">Public YouTube video URL</label>
+          <input id="analysisURL" name="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off">
+          <button class="button primary" type="submit">Analyse with Gemini</button>
+        </form>
+        <div id="analysisStatus" class="status" role="status" aria-live="polite"></div>
+        <article id="analysisResult" class="card result" hidden>
+          <div class="result-head"><span id="verdict" class="verdict">Pending</span><span id="confidence"></span></div>
+          <h2>Quick take</h2><p id="summary"></p>
+          <h3>Key moments</h3><div id="keyPoints" class="timeline"></div>
+          <h3>Possible skips</h3><div id="skipSegments" class="timeline"></div>
+          <h3>Evidence signals</h3><ul id="evidence"></ul>
+          <p id="caveat" class="caveat"></p>
+        </article>
+      </section>
+
+      <section id="settings" class="panel" aria-labelledby="settings-title">
+        <p class="eyebrow">Your controls</p><h1 id="settings-title">Settings</h1>
+        <section class="card settings-group">
+          <label class="switch-row"><span><strong>Track visible videos</strong><small>Off by default; local history only</small></span><input id="trackingEnabled" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Notifications</strong><small>Brief nudges and analysis-ready alerts</small></span><input id="notificationsEnabled" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Allow Gemini analysis</strong><small>Requires your saved key; manual analysis remains available</small></span><input id="aiConsent" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Analyse new YouTube videos automatically</strong><small>On by default after consent; meaningful active playback only, and may use paid API quota</small></span><input id="autoAnalysisEnabled" type="checkbox" role="switch"></label>
+        </section>
+        <section class="card settings-group">
+          <div class="card-title"><h2>Interruption controls</h2></div>
+          <label>Daily viewing target <span id="dailyLimitLabel">60 minutes</span><input id="dailyLimit" type="range" min="15" max="240" step="15" value="60"></label>
+          <div class="button-row"><button id="movieMode" class="button subtle">Movie Mode · 2h</button><button id="snooze" class="button subtle">Snooze · 30m</button></div>
+          <div class="two-column"><label>Quiet from<input id="quietStart" type="time" value="22:00"></label><label>Until<input id="quietEnd" type="time" value="08:00"></label></div>
+          <label class="check"><input id="quietEnabled" type="checkbox"><span>Enable quiet hours</span></label>
+        </section>
+        <section class="card settings-group">
+          <div class="card-title"><h2>Excluded sites</h2></div>
+          <form id="exclusionForm" class="inline-form"><input id="excludedSite" placeholder="example.com" autocomplete="off"><button class="button subtle" type="submit">Add</button></form>
+          <div id="exclusions" class="chips"></div>
+        </section>
+        <section class="card settings-group">
+          <div class="card-title"><h2>Gemini API key</h2><span id="keyStatus">Not saved</span></div>
+          <p class="small">Stored in extension-only Chrome storage, hidden from content scripts and excluded from exports.</p>
+          <form id="keyForm" class="inline-form"><input id="apiKey" type="password" placeholder="Paste key" autocomplete="off"><button class="button subtle" type="submit">Save</button></form>
+          <button id="clearKey" class="text-button">Clear saved key</button>
+        </section>
+        <section class="card settings-group danger-zone">
+          <div><h2>Your data</h2><p class="small">Export viewing history, analysis records and safe settings—never the API key—or permanently delete local history.</p></div>
+          <div class="button-row"><button id="exportData" class="button subtle">Export JSON</button><button id="deleteData" class="button danger">Delete history</button></div>
+        </section>
+      </section>
+    </div>
+  </main>
+  <div id="toast" class="panel-toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
