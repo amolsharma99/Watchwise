@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-label="Watchwise marquee promotional tile">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1400" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14111F"/>
+      <stop offset="0.57" stop-color="#211740"/>
+      <stop offset="1" stop-color="#44249B"/>
+    </linearGradient>
+    <linearGradient id="icon" x1="116" y1="115" x2="244" y2="243" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A58EFF"/>
+      <stop offset="1" stop-color="#5A36EF"/>
+    </linearGradient>
+    <linearGradient id="video" x1="747" y1="151" x2="1248" y2="413" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#383050"/>
+      <stop offset="1" stop-color="#1C1934"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1077 257) rotate(90) scale(352 425)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9871FF" stop-opacity="0.43"/>
+      <stop offset="1" stop-color="#9871FF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#080612" flood-opacity="0.38"/></filter>
+  </defs>
+  <rect width="1400" height="560" fill="url(#background)"/>
+  <rect width="1400" height="560" fill="url(#glow)"/>
+  <circle cx="1212" cy="100" r="242" fill="none" stroke="#C4B1FF" stroke-opacity="0.11" stroke-width="36"/>
+  <circle cx="1212" cy="100" r="145" fill="none" stroke="#D8CDFF" stroke-opacity="0.09" stroke-width="25"/>
+  <rect x="116" y="115" width="128" height="128" rx="34" fill="url(#icon)"/>
+  <path d="M135 179c12.7-20.2 27.8-30 45-30s32.3 9.8 45 30c-12.7 20.2-27.8 30-45 30s-32.3-9.8-45-30Z" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M171 163c0-2.3 2.6-3.7 4.5-2.5l22.5 15c1.8 1.2 1.8 3.8 0 5l-22.5 15c-1.9 1.2-4.5-.2-4.5-2.5v-30Z" fill="#FFFFFF"/>
+  <text x="113" y="364" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="91" font-weight="700" letter-spacing="-4">Watchwise</text>
+  <text x="119" y="426" fill="#DCD3FF" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="500">Watch with intent.</text>
+  <g filter="url(#shadow)">
+    <rect x="691" y="87" width="602" height="382" rx="32" fill="#211E35" stroke="#AEA0E5" stroke-opacity="0.37" stroke-width="2"/>
+    <rect x="722" y="122" width="540" height="270" rx="23" fill="url(#video)"/>
+    <path d="M958 216c0-7 7.9-11.2 13.7-7.4l86.8 57.8c5.4 3.6 5.4 11.6 0 15.2l-86.8 57.8c-5.8 3.8-13.7-.4-13.7-7.4V216Z" fill="#FFFFFF" fill-opacity="0.9"/>
+    <rect x="750" y="416" width="480" height="9" rx="4.5" fill="#5F587B"/>
+    <rect x="750" y="416" width="170" height="9" rx="4.5" fill="#A993FF"/>
+    <circle cx="919" cy="420.5" r="11" fill="#D9CBFF"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="1110" y="315" width="214" height="132" rx="23" fill="#352C52" stroke="#C9B5FF" stroke-opacity="0.58" stroke-width="2"/>
+    <rect x="1134" y="344" width="116" height="10" rx="5" fill="#F2EFFF" fill-opacity="0.84"/>
+    <rect x="1134" y="368" width="158" height="8" rx="4" fill="#BFAAFF" fill-opacity="0.53"/>
+    <rect x="1134" y="390" width="132" height="8" rx="4" fill="#BFAAFF" fill-opacity="0.38"/>
+    <rect x="1134" y="412" width="88" height="8" rx="4" fill="#BFAAFF" fill-opacity="0.7"/>
+  </g>
+</svg>
