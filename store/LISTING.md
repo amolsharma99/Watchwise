@@ -22,13 +22,27 @@ Watchwise works with ordinary detectable HTML5 video on HTTPS sites, including s
 
 ## Privacy tab
 
-**Single purpose:** Help users understand and reduce passive video watching in Chrome with local viewing insights and in-page nudges.
+**Single purpose description:** Help users understand and reduce passive video watching in Chrome by locally tracking opted-in, visible video playback and providing viewing insights and gentle in-page reminders.
 
 **Data handled:** Web history/browsing activity (eligible video URLs and sites), website content (limited title metadata), and user activity (playback events and viewing time). All is encrypted at rest and stored locally in the Chrome profile. There is no remote transfer by Watchwise, advertising, sale, or developer analytics. Authentication information is **not** handled in this Store edition.
 
-**Permission reasons:** `https://*/*` detects HTML5 video across HTTPS sites and embedded frames and shows in-page alerts. `sidePanel` displays the dashboard. `scripting` restores consent-gated tracking in already-open eligible tabs after updates. Local IndexedDB needs no `storage` permission. No native-notification, downloads, tabs, alarms, or remote-AI permission is requested.
+**Host permission (`https://*/*`) justification:** Watchwise detects visible HTML5 video playback across HTTPS websites, including embedded frames, and displays optional in-page reminders. The user chooses when local tracking starts and can turn it off or exclude sites. The extension reads only limited video and title metadata needed for viewing insights; it does not capture screen pixels, audio, captions, forms, cookies, or arbitrary page text. Access cannot be limited to a fixed list of sites because the extension's purpose is to work across websites.
 
-**Privacy policy URL after pushing:** `https://github.com/amolsharma99/Watchwise/blob/main/store/PRIVACY.md`
+**`scripting` justification:** Watchwise uses `chrome.scripting` to restore its packaged tracking content script in eligible HTTPS tabs that were already open when tracking was enabled or the extension updated. This keeps the user-selected tracking state working without requiring every tab to be reopened. It does not inject remotely hosted code.
+
+**`sidePanel` justification:** Watchwise uses Chrome's side panel to show the local daily and weekly viewing dashboard, site and video breakdowns, and controls for tracking, in-page reminders, Movie Mode, exclusions, export, and deletion.
+
+Local IndexedDB needs no `storage` permission. No native-notification, downloads, tabs, alarms, or remote-AI permission is requested.
+
+**Privacy policy URL:** `https://github.com/amolsharma99/Watchwise/blob/main/store/PRIVACY.md`
+
+**Remote code:** No remotely hosted code is executed.
+
+**Data use certification:** Review each certification statement in the dashboard and check it only if it accurately describes this local-only build and the published privacy policy. The source review found no remote analytics or AI calls, sale, or developer data transfer. The publisher must complete the certification in their own account.
+
+## Publisher Settings
+
+Enter a contact email that the publisher controls and checks, request verification from the dashboard, and follow the verification link in that inbox. This is separate from 2-Step Verification and is required before submission.
 
 ## Test instructions tab
 
