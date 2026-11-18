@@ -11,7 +11,7 @@ abort "Could not extract background recovery helpers" unless start && finish
 helpers = background[start...finish]
 
 fixture = <<~JAVASCRIPT
-  const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.7";
+  const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.9";
   let healthReplies = [];
   let sent = [];
   let injections = 0;

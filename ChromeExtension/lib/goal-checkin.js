@@ -10,7 +10,7 @@ const PLAYING_STATES = new Set(["playing", "heartbeat", "rate_changed"]);
 const PROCESSED_RETENTION_MS = 24 * 60 * 60_000;
 const MAX_PROCESSED_IDENTITIES = 200;
 const MAX_PENDING_IDENTITIES = 20;
-const RESERVATION_LEASE_MS = 10_000;
+const RESERVATION_LEASE_MS = 30_000;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const RETRY_BASE_MS = 5_000;
 
@@ -20,8 +20,20 @@ export function goalCheckInIdentity(event) {
 
 export function isGoalPlaybackActive(events, targetEvent, nowMs = Date.now(), freshnessMs = 30_000) {
   const targetKey = playbackStreamKey(targetEvent);
-  const latest = events.filter((event) => playbackStreamKey(event) === targetKey && event.occurredAtMs <= nowMs)
+  const exactLatest = events.filter((event) => playbackStreamKey(event) === targetKey && event.occurredAtMs <= nowMs)
     .sort((a, b) => a.occurredAtMs - b.occurredAtMs || a.eventID.localeCompare(b.eventID)).at(-1);
+  const youtubeIdentity = youtubeVideoIdentity(targetEvent.url)?.videoKey;
+  const identityLatest = youtubeIdentity ? events.filter((event) => (
+    event.tabID === targetEvent.tabID
+      && youtubeVideoIdentity(event.url)?.videoKey === youtubeIdentity
+      && event.occurredAtMs >= targetEvent.occurredAtMs && event.occurredAtMs <= nowMs
+  )).sort((a, b) => a.occurredAtMs - b.occurredAtMs || a.eventID.localeCompare(b.eventID)).at(-1) : null;
+  // A later same-video event in this tab represents a SPA/player successor and
+  // supersedes the reserved stream. A still-live original stream can reclaim
+  // liveness on its next heartbeat, avoiding durable suppression by a stray
+  // hidden duplicate.
+  const latest = identityLatest && (!exactLatest || identityLatest.occurredAtMs > exactLatest.occurredAtMs)
+    ? identityLatest : exactLatest;
   return Boolean(latest
     && ["playing", "heartbeat"].includes(latest.state)
     && latest.isVisible && latest.isTabActive
@@ -67,6 +79,19 @@ export function meaningfulGoalPlaybackSeconds(events, targetEvent) {
       if (meaningfulSeconds > 0) intervals.push([previous.occurredAtMs, previous.occurredAtMs + meaningfulSeconds * 1_000]);
     }
   }
+  const orderedStreams = [...streams.values()].sort((a, b) => a[0].occurredAtMs - b[0].occurredAtMs);
+  for (let index = 0; index + 1 < orderedStreams.length; index += 1) {
+    const previous = orderedStreams[index].at(-1);
+    const next = orderedStreams[index + 1][0];
+    if (!PLAYING_STATES.has(previous.state) || !PLAYING_STATES.has(next.state)
+      || !previous.isVisible || !previous.isTabActive || !next.isVisible || !next.isTabActive) continue;
+    const wallSeconds = (next.occurredAtMs - previous.occurredAtMs) / 1_000;
+    const mediaDelta = next.positionSeconds - previous.positionSeconds;
+    if (wallSeconds <= 0 || wallSeconds > 10 || mediaDelta <= 0) continue;
+    if (mediaDelta > wallSeconds * previous.playbackRate * 1.5 + 2) continue;
+    const meaningfulSeconds = Math.min(wallSeconds, mediaDelta / Math.max(previous.playbackRate, 0.25));
+    if (meaningfulSeconds > 0) intervals.push([previous.occurredAtMs, previous.occurredAtMs + meaningfulSeconds * 1_000]);
+  }
   const ordered = intervals.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const clusters = [];
   for (const interval of ordered) {
@@ -93,7 +118,7 @@ function normalizedState(rawState, nowMs) {
   const pending = Array.isArray(rawState?.pending) ? rawState.pending.filter((entry) => (
     entry && typeof entry.identity === "string" && entry.identity.length <= 256
       && Number.isFinite(entry.reservedAtMs) && Number.isFinite(entry.retryAtMs)
-      && Number.isInteger(entry.attempts) && entry.attempts >= 0 && entry.attempts < MAX_DELIVERY_ATTEMPTS
+      && Number.isInteger(entry.attempts) && entry.attempts >= 0 && entry.attempts <= MAX_DELIVERY_ATTEMPTS
       && entry.reservedAtMs <= nowMs
   )).slice(-MAX_PENDING_IDENTITIES) : [];
   return { schemaVersion: 2, processed, pending, lastInterventionAtMs };
@@ -175,16 +200,13 @@ export function failGoalCheckInReservation(rawState, reservation, nowMs = Date.n
   if (!pending) return Object.freeze(state);
   const attempts = pending.attempts + 1;
   state.pending = state.pending.filter((entry) => entry !== pending);
-  if (attempts >= MAX_DELIVERY_ATTEMPTS) {
-    state.processed = [...state.processed, { identity: pending.identity, processedAtMs: nowMs }].slice(-MAX_PROCESSED_IDENTITIES);
-  } else {
-    state.pending.push({
-      identity: pending.identity,
-      reservedAtMs: nowMs,
-      retryAtMs: nowMs + RETRY_BASE_MS * (2 ** (attempts - 1)),
-      attempts
-    });
-  }
+  const cappedAttempts = Math.min(attempts, MAX_DELIVERY_ATTEMPTS);
+  state.pending.push({
+    identity: pending.identity,
+    reservedAtMs: nowMs,
+    retryAtMs: nowMs + (attempts >= MAX_DELIVERY_ATTEMPTS ? 5 * 60_000 : RETRY_BASE_MS * (2 ** (attempts - 1))),
+    attempts: cappedAttempts
+  });
   return Object.freeze(state);
 }
 
@@ -201,22 +223,5 @@ export async function deliverGoalCheckIn({ browser, event, isAllowed }) {
     return false;
   }
 
-  const notificationID = `nudge:goal:${event.eventID}`;
-  let notificationDelivered = false;
-  try {
-    await browser.notifications.create(notificationID, {
-      type: "basic",
-      iconUrl: browser.runtime.getURL("assets/icon128.png"),
-      title: "Watchwise check-in",
-      message: GOAL_CHECKIN_MESSAGE,
-      priority: 0
-    });
-    notificationDelivered = true;
-  } catch {}
-  if (!(await isAllowed())) {
-    if (notificationDelivered) await browser.notifications.clear(notificationID).catch(() => {});
-    if (toastDelivered) await browser.tabs.sendMessage(event.tabID, { type: "HIDE_TOAST" }, { frameId: event.frameID }).catch(() => {});
-    return false;
-  }
-  return toastDelivered || notificationDelivered;
+  return true;
 }

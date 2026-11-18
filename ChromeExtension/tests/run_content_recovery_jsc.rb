@@ -86,7 +86,7 @@ fixture = <<~JAVASCRIPT
       if (sendMode === "throw_invalidated") throw new Error("Extension context invalidated.");
       if (sendMode === "reject_invalidated") return Promise.reject(new Error("Extension context invalidated."));
       if (sendMode === "reject_transient") return Promise.reject(new Error("Could not establish connection. Receiving end does not exist."));
-      if (message.type === "CONTENT_HEALTH_CHECK") return Promise.resolve({ ok: healthIsCurrent, lifecycle: "watchwise-tracker-v0.3.7" });
+      if (message.type === "CONTENT_HEALTH_CHECK") return Promise.resolve({ ok: healthIsCurrent, lifecycle: "watchwise-tracker-v0.3.9" });
       if (message.type === "CONTENT_READY") return readyReplyQueue.length ? readyReplyQueue.shift() : Promise.resolve({ ok: true, enabled: readyEnabled });
       return Promise.resolve({ ok: true });
     },
@@ -99,7 +99,7 @@ fixture = <<~JAVASCRIPT
   delete globalThis.__watchwiseContentLifecycle;
   await eval(CONTENT_SOURCE);
   const first = globalThis.__watchwiseContentLifecycle;
-  assertRecovery(first?.lifecycle === "watchwise-tracker-v0.3.7", "missing injection did not create a controller");
+  assertRecovery(first?.lifecycle === "watchwise-tracker-v0.3.9", "missing injection did not create a controller");
   assertRecovery(observerCreates === 1 && mutationCreates === 1 && runtimeAdds === 1, "missing injection duplicated resources");
 
   await eval(CONTENT_SOURCE);
@@ -210,8 +210,31 @@ fixture = <<~JAVASCRIPT
   const afterSynchronousInvalidation = globalThis.__watchwiseContentLifecycle;
   assertRecovery(afterSynchronousInvalidation !== replacement && !afterSynchronousInvalidation.isDisposed(), "recovery after synchronous invalidation failed");
 
+  const fullscreenRoot = new Element("fullscreen");
+  document.fullscreenElement = fullscreenRoot;
+  let regularToast = null;
+  runtimeListener({ type: "SHOW_TOAST", text: "Regular toast" }, {}, (response) => { regularToast = response; });
+  assertRecovery(regularToast?.shown === true, "regular toast was not acknowledged after DOM append");
+  let cooledToast = null;
+  runtimeListener({ type: "SHOW_TOAST", text: "Too soon" }, {}, (response) => { cooledToast = response; });
+  assertRecovery(cooledToast?.shown === false, "ordinary toast cooldown returned a false-positive acknowledgement");
+  let goalToast = null;
+  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin", actionLabel: "Open", action: { type: "open_panel" } }, {}, (response) => { goalToast = response; });
+  assertRecovery(goalToast?.shown === true, "goal toast did not bypass the unrelated toast cooldown");
+  assertRecovery(fullscreenRoot.children.some((node) => node.id === "watchwise-toast-host"), "toast was not appended inside the fullscreen element");
+
+  class ThrowingFullscreenRoot extends Element { append() { throw new Error("fullscreen append failed"); } }
+  document.fullscreenElement = new ThrowingFullscreenRoot("fullscreen");
+  let thrownAppend = null;
+  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin" }, {}, (response) => { thrownAppend = response; });
+  assertRecovery(thrownAppend?.ok === true && thrownAppend.shown === false, "throwing fullscreen append produced an uncaught or false-positive acknowledgement");
+  document.fullscreenElement = new HTMLVideoElement();
+  let directVideoFullscreen = null;
+  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin" }, {}, (response) => { directVideoFullscreen = response; });
+  assertRecovery(directVideoFullscreen?.shown === false, "direct-video fullscreen falsely acknowledged an invisible toast");
+  document.fullscreenElement = fullscreenRoot;
+
   sendMode = "throw_invalidated";
-  runtimeListener({ type: "SHOW_TOAST", text: "Ready", actionLabel: "Open", action: { type: "open_panel" } }, {}, () => {});
   const toastAction = createdElements.filter((node) => node.className === "primary").at(-1);
   assertRecovery(typeof toastAction?.listeners.click === "function", "toast action fixture was not created");
   toastAction.listeners.click();

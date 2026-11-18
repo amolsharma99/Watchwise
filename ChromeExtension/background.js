@@ -10,12 +10,14 @@ import {
   classifyHTTPFailure,
   classifyInteractionFailure,
   classifyNetworkFailure,
+  completeGoalCheckInReservation,
   createInteraction,
   createAnalysisJob,
   dayWindow,
   distinctSessionsInWindow,
   deliverGoalCheckIn,
   evaluateGoalCheckIn,
+  failGoalCheckInReservation,
   GOAL_CHECKIN_MIN_GAP_MS,
   isExcludedSite,
   isQuietTime,
@@ -47,7 +49,7 @@ const PRUNE_ALARM = "watchwise-prune";
 const SESSION_GAP_MS = 10 * 60_000;
 const RETENTION_MS = 180 * 24 * 60 * 60_000;
 const DASHBOARD_UPDATE_INTERVAL_MS = 1_000;
-const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.7";
+const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.9";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 const repository = new IndexedDBRepository();
 const sessions = new Map();
@@ -280,8 +282,6 @@ async function broadcastTrackingState() {
 }
 
 async function clearInterventions() {
-  const existing = await chrome.notifications.getAll();
-  await Promise.allSettled(Object.keys(existing).filter((id) => id.startsWith("nudge:") || id.startsWith("analysis:")).map((id) => chrome.notifications.clear(id)));
   const tabs = await chrome.tabs.query({ url: "https://*/*" });
   await Promise.allSettled(tabs.map((tab) => chrome.tabs.sendMessage(tab.id, { type: "HIDE_TOAST" })));
 }
@@ -428,7 +428,7 @@ async function maybeGoalCheckIn(event, generation = historyGeneration) {
     });
     await localSet({ [GOAL_CHECK_STATE_KEY]: decision.state });
     if (decision.shouldPrompt && generation === historyGeneration && revision === settingsRevision) {
-      reservation = { generation, revision, identity: decision.identity };
+      reservation = { generation, revision, ...decision.reservation };
     }
   });
   if (!reservation) return false;
@@ -443,7 +443,16 @@ async function maybeGoalCheckIn(event, generation = historyGeneration) {
       && interventionsAllowed(currentSettings, nowMs, event.pageSite, event.frameSite)
       && isGoalPlaybackActive(recentEvents, event, nowMs);
   };
-  return deliverGoalCheckIn({ browser: chrome, event, isAllowed: stillAllowed });
+  const delivered = await deliverGoalCheckIn({ browser: chrome, event, isAllowed: stillAllowed });
+  await withDataMutation(async () => {
+    if (generation !== historyGeneration) return;
+    const stored = await localGet(GOAL_CHECK_STATE_KEY);
+    const next = delivered
+      ? completeGoalCheckInReservation(stored[GOAL_CHECK_STATE_KEY] || {}, reservation, Date.now())
+      : failGoalCheckInReservation(stored[GOAL_CHECK_STATE_KEY] || {}, reservation, Date.now());
+    await localSet({ [GOAL_CHECK_STATE_KEY]: next });
+  });
+  return delivered;
 }
 
 async function maybeNudge(event, generation = historyGeneration) {
@@ -500,23 +509,6 @@ async function maybeNudge(event, generation = historyGeneration) {
     toastDelivered = true;
   } catch {}
   if (generation !== historyGeneration || revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now(), event.pageSite, event.frameSite)) {
-    if (toastDelivered) await chrome.tabs.sendMessage(event.tabID, { type: "HIDE_TOAST" }, { frameId: event.frameID }).catch(() => {});
-    return;
-  }
-  const notificationID = `nudge:${event.eventID}`;
-  let notificationDelivered = false;
-  try {
-    await chrome.notifications.create(notificationID, {
-      type: "basic",
-      iconUrl: chrome.runtime.getURL("assets/icon128.png"),
-      title: nudge.title.slice(0, 80),
-      message: nudge.message.slice(0, 180),
-      priority: 0
-    });
-    notificationDelivered = true;
-  } catch {}
-  if (generation !== historyGeneration || revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now(), event.pageSite, event.frameSite)) {
-    if (notificationDelivered) await chrome.notifications.clear(notificationID).catch(() => {});
     if (toastDelivered) await chrome.tabs.sendMessage(event.tabID, { type: "HIDE_TOAST" }, { frameId: event.frameID }).catch(() => {});
   }
 }
@@ -745,20 +737,11 @@ async function announceAnalysisReady(job, result, generation) {
     const nowMs = Date.now();
     if (!settings.aiEnabled || !interventionsAllowed(settings, nowMs)) return;
     const revision = settingsRevision;
-    const notificationID = `analysis:${job.jobID}`;
-    await chrome.notifications.create(notificationID, {
-      type: "basic",
-      iconUrl: chrome.runtime.getURL("assets/icon128.png"),
-      title: "Watchwise analysis ready",
-      message: "Open Watchwise to view the private summary.",
-      priority: 0
-    });
-    if (revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now())) {
-      await chrome.notifications.clear(notificationID);
-      return;
-    }
     if (source?.tabId) {
       await chrome.tabs.sendMessage(source.tabId, { type: "SHOW_TOAST", text: "Your Watchwise analysis is ready.", actionLabel: "View summary", action: { type: "open_panel" } }, source.frameId !== undefined ? { frameId: source.frameId } : undefined).catch(() => {});
+      if (revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now())) {
+        await chrome.tabs.sendMessage(source.tabId, { type: "HIDE_TOAST" }, source.frameId !== undefined ? { frameId: source.frameId } : undefined).catch(() => {});
+      }
     }
   });
 }
@@ -972,7 +955,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === INSIGHTS_ALARM) void announceDashboardUpdated();
   if (alarm.name === PRUNE_ALARM) void repository.prune(Date.now() - RETENTION_MS);
 });
-chrome.notifications.onClicked.addListener(() => { void openPanel(); });
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 void initializationPromise.then(recoverExistingContentScripts).catch(() => {});
 void initializationPromise.catch(() => {});

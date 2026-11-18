@@ -1,7 +1,7 @@
 (async () => {
   "use strict";
 
-  const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.7";
+  const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.9";
   const CONTROLLER_KEY = "__watchwiseContentLifecycle";
   const previousController = globalThis[CONTROLLER_KEY];
   if (previousController?.probe) {
@@ -299,7 +299,8 @@
     const now = Date.now();
     const isGoalCheckIn = message.priority === "goal_checkin";
     if ((!isGoalCheckIn && now - lastToastAt < TOAST_COOLDOWN_MS) || typeof message.text !== "string") return false;
-    lastToastAt = now;
+    const fullscreenRoot = document.fullscreenElement;
+    if (fullscreenRoot instanceof HTMLVideoElement) return false;
     document.querySelector("#watchwise-toast-host")?.remove();
     const host = document.createElement("div");
     host.id = "watchwise-toast-host";
@@ -339,7 +340,8 @@
     actions.append(dismiss);
     toast.append(brand, text, actions);
     shadow.append(style, toast);
-    document.documentElement.append(host);
+    (fullscreenRoot || document.documentElement).append(host);
+    lastToastAt = now;
     setTimeout(() => host.remove(), 15_000);
     return true;
   }
@@ -364,7 +366,9 @@
       );
       return true;
     } else if (message?.type === "SHOW_TOAST") {
-      safeRespond(sendResponse, { ok: true, shown: showToast(message) });
+      let shown = false;
+      try { shown = showToast(message); } catch {}
+      safeRespond(sendResponse, { ok: true, shown });
     } else if (message?.type === "HIDE_TOAST") {
       document.querySelector("#watchwise-toast-host")?.remove();
       safeRespond(sendResponse, { ok: true });

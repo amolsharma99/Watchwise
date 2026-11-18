@@ -16,9 +16,12 @@ import {
   createInteraction,
   createWithBackgroundFallback,
   createAnalysisJob,
+  completeGoalCheckInReservation,
   dayWindow,
   distinctSessionsInWindow,
+  deliverGoalCheckIn,
   evaluateGoalCheckIn,
+  failGoalCheckInReservation,
   GOAL_CHECKIN_MESSAGE,
   GOAL_CHECKIN_MIN_GAP_MS,
   meaningfulGoalPlaybackSeconds,
@@ -531,7 +534,8 @@ await test("goal check-in fires at 15 meaningful seconds exactly once", () => {
   equal(first.shouldPrompt, true);
   equal(first.message, GOAL_CHECKIN_MESSAGE);
   equal(first.message, "Hope you’re clear on your goal for watching this video.");
-  const restartedState = JSON.parse(JSON.stringify(first.state));
+  const completedState = completeGoalCheckInReservation(first.state, first.reservation, BASE + 15_001);
+  const restartedState = JSON.parse(JSON.stringify(completedState));
   const repeated = evaluateGoalCheckIn({ events: [...threshold, event({ eventID: "threshold-repeat", sessionID: "goal-session", playerID: "goal-player", url: "https://www.youtube.com/watch?v=goal", mediaTitle: "Goal video", occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" })], event: event({ eventID: "threshold-target", sessionID: "goal-session", playerID: "goal-player", url: "https://www.youtube.com/watch?v=goal", mediaTitle: "Goal video", occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" }), settings, state: restartedState, nowMs: BASE + 20_000 });
   equal(repeated.shouldPrompt, false);
   equal(repeated.suppression, "already_processed");
@@ -590,6 +594,17 @@ await test("goal delivery requires the reserved stream to remain active and visi
   const hidden = event({ ...active.at(-1), eventID: "active-delivery-hidden", occurredAtMs: BASE + 16_000, positionSeconds: 16, state: "heartbeat", isVisible: false });
   equal(isGoalPlaybackActive([...active, hidden], active.at(-1), BASE + 16_000), false);
   equal(isGoalPlaybackActive(active, active.at(-1), BASE + 46_000), false);
+
+  const successorPause = event({ ...active.at(-1), eventID: "active-successor-pause", sessionID: "successor", playerID: "successor", occurredAtMs: BASE + 16_000, positionSeconds: 16, state: "paused" });
+  equal(isGoalPlaybackActive([...active, successorPause], active.at(-1), BASE + 16_000), false);
+  const successorHidden = event({ ...successorPause, eventID: "active-successor-hidden", occurredAtMs: BASE + 17_000, state: "heartbeat", isVisible: false });
+  equal(isGoalPlaybackActive([...active, successorHidden], active.at(-1), BASE + 17_000), false);
+  const originalReclaims = event({ ...active.at(-1), eventID: "active-original-reclaims", occurredAtMs: BASE + 18_000, positionSeconds: 18, state: "heartbeat" });
+  equal(isGoalPlaybackActive([...active, successorHidden, originalReclaims], active.at(-1), BASE + 18_000), true);
+
+  const genericTarget = event({ eventID: "generic-active", sessionID: "generic-active", playerID: "generic-active", url: "https://video.example/watch", frameSite: "video.example", pageSite: "video.example", occurredAtMs: BASE, positionSeconds: 0 });
+  const unrelatedGeneric = event({ ...genericTarget, eventID: "generic-other", sessionID: "generic-other", playerID: "generic-other", occurredAtMs: BASE + 1_000, state: "paused" });
+  equal(isGoalPlaybackActive([genericTarget, unrelatedGeneric], genericTarget, BASE + 1_000), true);
 });
 
 await test("goal cadence keeps a distinct active video pending until the brief gap", () => {
@@ -597,15 +612,16 @@ await test("goal cadence keeps a distinct active video pending until the brief g
   const firstEvents = goalProgressEvents({ id: "first-goal", url: "https://www.youtube.com/watch?v=first-goal", sessionID: "first-goal" });
   const first = evaluateGoalCheckIn({ events: firstEvents, event: firstEvents.at(-1), settings, nowMs: BASE + 15_000 });
   assert(first.shouldPrompt);
+  const firstCompleted = completeGoalCheckInReservation(first.state, first.reservation, BASE + 15_001);
 
   const secondEvents = goalProgressEvents({ id: "second-goal", url: "https://www.youtube.com/watch?v=second-goal", sessionID: "second-goal", startMs: BASE + 30_000 });
-  const pending = evaluateGoalCheckIn({ events: secondEvents, event: secondEvents.at(-1), settings, state: first.state, nowMs: BASE + 45_000 });
+  const pending = evaluateGoalCheckIn({ events: secondEvents, event: secondEvents.at(-1), settings, state: firstCompleted, nowMs: BASE + 45_000 });
   equal(pending.shouldPrompt, false);
   equal(pending.suppression, "cadence");
   equal(pending.state.processed.some((entry) => entry.identity === "youtube:second-goal"), false);
 
-  const stillActive = event({ eventID: "second-still-active", sessionID: "second-goal", playerID: "goal-player", url: "https://www.youtube.com/watch?v=second-goal", mediaTitle: "Goal video", occurredAtMs: BASE + 75_000, positionSeconds: 45, state: "heartbeat" });
-  const delivered = evaluateGoalCheckIn({ events: [...secondEvents, stillActive], event: stillActive, settings, state: pending.state, nowMs: BASE + 75_000 });
+  const stillActive = event({ eventID: "second-still-active", sessionID: "second-goal", playerID: "goal-player", url: "https://www.youtube.com/watch?v=second-goal", mediaTitle: "Goal video", occurredAtMs: BASE + 75_001, positionSeconds: 45.001, state: "heartbeat" });
+  const delivered = evaluateGoalCheckIn({ events: [...secondEvents, stillActive], event: stillActive, settings, state: pending.state, nowMs: BASE + 75_001 });
   equal(GOAL_CHECKIN_MIN_GAP_MS, 60_000);
   equal(delivered.shouldPrompt, true);
 
@@ -619,13 +635,14 @@ await test("goal canonical identity is retained for 24 hours then permits a fres
   const firstEvents = goalProgressEvents({ id: "retention-first", url: "https://www.youtube.com/watch?v=retained", sessionID: "retention-first" });
   const first = evaluateGoalCheckIn({ events: firstEvents, event: firstEvents.at(-1), settings, nowMs: BASE + 15_000 });
   assert(first.shouldPrompt);
+  const firstCompleted = completeGoalCheckInReservation(first.state, first.reservation, BASE + 15_001);
 
   const replay23 = goalProgressEvents({ id: "retention-23", url: "https://www.youtube.com/watch?v=retained", sessionID: "retention-23", startMs: BASE + 23 * 60 * 60_000 });
-  const withinWindow = evaluateGoalCheckIn({ events: replay23, event: replay23.at(-1), settings, state: first.state, nowMs: BASE + 23 * 60 * 60_000 + 15_000 });
+  const withinWindow = evaluateGoalCheckIn({ events: replay23, event: replay23.at(-1), settings, state: firstCompleted, nowMs: BASE + 23 * 60 * 60_000 + 15_000 });
   equal(withinWindow.suppression, "already_processed");
 
   const replay25 = goalProgressEvents({ id: "retention-25", url: "https://www.youtube.com/watch?v=retained", sessionID: "retention-25", startMs: BASE + 25 * 60 * 60_000 });
-  const afterWindow = evaluateGoalCheckIn({ events: replay25, event: replay25.at(-1), settings, state: first.state, nowMs: BASE + 25 * 60 * 60_000 + 15_000 });
+  const afterWindow = evaluateGoalCheckIn({ events: replay25, event: replay25.at(-1), settings, state: firstCompleted, nowMs: BASE + 25 * 60 * 60_000 + 15_000 });
   equal(afterWindow.shouldPrompt, true);
 });
 
@@ -634,6 +651,90 @@ await test("current-stream nudge context is not taken from another concurrent pl
   const other = goalProgressEvents({ id: "other-stream", seconds: 40, url: "https://video.example/other", sessionID: "other-stream", playerID: "other-stream", startMs: BASE + 1_000, frameSite: "video.example", pageSite: "video.example" });
   near(activeSessionSeconds(current, BASE + 5_000), 5);
   assert(activeSessionSeconds([...current, ...other], BASE + 41_000) > 30);
+});
+
+await test("dashboard optimistic tail does not invent meaningful goal progress", () => {
+  const singletonRotations = [0, 5, 10, 15].map((seconds, index) => event({
+    eventID: `singleton-${index}`, sessionID: `singleton-${index}`, playerID: `singleton-${index}`,
+    url: "https://www.youtube.com/watch?v=singleton", occurredAtMs: BASE + seconds * 1_000,
+    positionSeconds: 0, state: "heartbeat"
+  }));
+  const dashboard = summarizeViewing(singletonRotations, { startMs: BASE, endMs: BASE + 60_000 }, { nowMs: BASE + 20_000 });
+  assert(dashboard.activeSeconds > 15);
+  near(meaningfulGoalPlaybackSeconds(singletonRotations, singletonRotations.at(-1)), 0);
+});
+
+await test("goal reservation survives restart, blocks concurrent heartbeats, and retries without false processing", () => {
+  const settings = { trackingEnabled: true, notificationsEnabled: true };
+  const events = goalProgressEvents({ id: "lease", url: "https://www.youtube.com/watch?v=lease", sessionID: "lease" });
+  const reserved = evaluateGoalCheckIn({ events, event: events.at(-1), settings, nowMs: BASE + 15_000 });
+  assert(reserved.shouldPrompt);
+  const restartedPending = JSON.parse(JSON.stringify(reserved.state));
+  const concurrent = evaluateGoalCheckIn({ events, event: events.at(-1), settings, state: restartedPending, nowMs: BASE + 20_000 });
+  equal(concurrent.shouldPrompt, false);
+  equal(concurrent.suppression, "pending");
+
+  let failedState = failGoalCheckInReservation(reserved.state, reserved.reservation, BASE + 15_100);
+  equal(failedState.processed.length, 0);
+  const tooSoon = evaluateGoalCheckIn({ events, event: events.at(-1), settings, state: failedState, nowMs: BASE + 19_000 });
+  equal(tooSoon.suppression, "pending");
+  const retry = evaluateGoalCheckIn({ events, event: events.at(-1), settings, state: failedState, nowMs: BASE + 21_000 });
+  assert(retry.shouldPrompt);
+  failedState = failGoalCheckInReservation(retry.state, retry.reservation, BASE + 21_100);
+  const retryTwo = evaluateGoalCheckIn({ events, event: events.at(-1), settings, state: failedState, nowMs: BASE + 32_000 });
+  assert(retryTwo.shouldPrompt);
+  failedState = failGoalCheckInReservation(retryTwo.state, retryTwo.reservation, BASE + 32_100);
+  equal(failedState.processed.length, 0);
+  assert(failedState.pending[0].retryAtMs >= BASE + 5 * 60_000);
+
+  const unverifiedV1 = { schemaVersion: 1, processed: [{ identity: "youtube:lease", processedAtMs: BASE + 14_000 }] };
+  const migrated = evaluateGoalCheckIn({ events, event: events.at(-1), settings, state: unverifiedV1, nowMs: BASE + 15_000 });
+  assert(migrated.shouldPrompt, "unverified v0.3.8 processed state survived schema migration");
+});
+
+await test("plausible same-tab YouTube player rotation bridges meaningful progress", () => {
+  const rotations = [0, 5, 10, 15, 20].map((seconds, index) => event({
+    eventID: `rotation-${index}`, sessionID: `rotation-${index}`, playerID: `rotation-${index}`,
+    url: index % 2 ? "https://www.youtube.com/embed/rotation" : "https://www.youtube.com/watch?v=rotation",
+    occurredAtMs: BASE + seconds * 1_000, positionSeconds: seconds, state: "heartbeat"
+  }));
+  near(meaningfulGoalPlaybackSeconds(rotations, rotations.at(-1)), 20);
+  const otherTab = event({ ...rotations.at(-1), eventID: "rotation-other-tab", sessionID: "rotation-other-tab", playerID: "rotation-other-tab", tabID: 9, occurredAtMs: BASE + 25_000, positionSeconds: 25 });
+  near(meaningfulGoalPlaybackSeconds([...rotations, otherTab], otherTab), 0);
+});
+
+await test("realistic seek then 5-second heartbeat pipeline acknowledges one goal check-in", async () => {
+  const shared = { sessionID: "pipeline", playerID: "pipeline-player", url: "https://www.youtube.com/watch?v=pipeline", mediaTitle: "Pipeline video" };
+  const pipeline = [
+    event({ ...shared, eventID: "pipeline-seeking", occurredAtMs: BASE, positionSeconds: 20, state: "seeking" }),
+    event({ ...shared, eventID: "pipeline-seeked", occurredAtMs: BASE + 100, positionSeconds: 120, state: "seeking" }),
+    event({ ...shared, eventID: "pipeline-play", occurredAtMs: BASE + 1_000, positionSeconds: 120, state: "playing" }),
+    event({ ...shared, eventID: "pipeline-5", occurredAtMs: BASE + 6_000, positionSeconds: 125, state: "heartbeat" }),
+    event({ ...shared, eventID: "pipeline-10", occurredAtMs: BASE + 11_000, positionSeconds: 130, state: "heartbeat" }),
+    event({ ...shared, eventID: "pipeline-15", occurredAtMs: BASE + 16_000, positionSeconds: 135, state: "heartbeat" }),
+    event({ ...shared, eventID: "pipeline-20", occurredAtMs: BASE + 21_000, positionSeconds: 140, state: "heartbeat" })
+  ];
+  let state = {};
+  let prompts = 0;
+  const calls = [];
+  const browser = {
+    tabs: { async sendMessage(_tabID, message) { calls.push(message); return { ok: true, shown: true }; } },
+    notifications: { async create(_id, options) { calls.push(options); }, async clear() {} },
+    runtime: { getURL(path) { return path; } }
+  };
+  for (let index = 0; index < pipeline.length; index += 1) {
+    const current = pipeline[index];
+    const decision = evaluateGoalCheckIn({ events: pipeline.slice(0, index + 1), event: current, settings: { trackingEnabled: true, notificationsEnabled: true }, state, nowMs: current.occurredAtMs });
+    state = decision.state;
+    if (!decision.shouldPrompt) continue;
+    prompts += 1;
+    const delivered = await deliverGoalCheckIn({ browser, event: current, isAllowed: async () => isGoalPlaybackActive(pipeline.slice(0, index + 1), current, current.occurredAtMs) });
+    assert(delivered);
+    state = completeGoalCheckInReservation(state, decision.reservation, current.occurredAtMs + 1);
+  }
+  equal(prompts, 1);
+  equal(calls.filter((item) => item.type === "SHOW_TOAST").length, 1);
+  equal(calls.filter((item) => item.message === GOAL_CHECKIN_MESSAGE).length, 1);
 });
 
 await test("analysis job survives JSON restart and resumes safely", () => {
