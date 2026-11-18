@@ -17,14 +17,17 @@ Dir.mktmpdir("watchwise-local-check") do |stage|
   stage = production
 
   manifest = JSON.parse(File.read(File.join(stage, "manifest.json")))
-  assert(manifest["version"] == "0.4.0", "wrong local Store version")
+  assert(manifest["version"] == "0.4.1", "wrong local Store version")
   assert(manifest["permissions"] == %w[scripting sidePanel], "local permissions are not minimal")
   assert(!manifest.fetch("permissions", []).include?("alarms"), "alarm permission leaked")
   assert(manifest["host_permissions"] == ["https://*/*"], "wrong host scope")
+  handoff_entry = manifest.fetch("content_scripts").find { |entry| entry["js"] == ["studio-handoff.js"] }
+  assert(handoff_entry && handoff_entry["all_frames"] == false && handoff_entry["matches"] == ["https://youtube.com/*", "https://*.youtube.com/*"], "Studio handoff script scope is too broad")
 
   files = Dir.chdir(stage) { Dir.glob("**/*", File::FNM_DOTMATCH).select { |path| File.file?(path) }.sort }
   forbidden_files = %w[lib/analysis.js lib/auto-analysis.js lib/gemini-protocol.js lib/index.js nano-pilot.html nano-sample.txt]
   assert((files & forbidden_files).empty?, "model feature modules leaked into local package")
+  assert(files.include?("studio-handoff.js"), "user-initiated Studio handoff missing")
   source = files.grep(/\.(?:js|json|html|css|txt)\z/).map { |path| File.read(File.join(stage, path)) }.join("\n")
   {
     "remote provider" => /gemini|generativelanguage/i,
@@ -41,9 +44,14 @@ Dir.mktmpdir("watchwise-local-check") do |stage|
   panel = File.read(File.join(stage, "sidepanel.html"))
   background = File.read(File.join(stage, "background.js"))
   sidepanel = File.read(File.join(stage, "sidepanel.js"))
+  handoff = File.read(File.join(stage, "studio-handoff.js"))
   storage = File.read(File.join(stage, "lib", "storage.js"))
   settings = File.read(File.join(stage, "lib", "settings.js"))
   assert(panel.scan(/data-panel=/).length == 2 && panel.include?('data-panel="overview"') && panel.include?('data-panel="settings"'), "public UI is not Overview + Settings only")
+  assert(panel.include?('src="assets/icon32.png"') && !panel.include?('>W</span>'), "selected eye/play mark is missing from panel")
+  assert(handoff.include?('Ask in AI Studio') && handoff.include?('If you cannot access it') && handoff.include?('manualText.value = prompt'), "handoff prompt or safe manual fallback missing")
+  assert(!handoff.match?(/\bfetch\s*\(|XMLHttpRequest|WebSocket|chrome\.storage/), "handoff makes a network call or reads storage")
+  assert(background.include?('url.searchParams.getAll("v")') && background.match?(/OPEN_AI_STUDIO.*?topFrame.*?frameVideoID.*?tabVideoID.*?frameVideoID !== tabVideoID.*?chrome\.tabs\.create\(\{ url: "https:\/\/aistudio\.google\.com\/prompts\/new_chat"/m), "Studio new-chat tab is not gated to the current top-frame YouTube watch video")
   assert(panel.include?('id="storageRecovery"') && panel.include?('id="resetSecureStorage"') && panel.include?("permanently deletes all Watchwise viewing history and settings"), "destructive secure-storage recovery UI is missing")
   %w[videoBreakdown movieMode snooze quietEnabled exclusionForm exportData deleteData].each { |id| assert(panel.include?("id=\"#{id}\""), "missing local feature #{id}") }
   assert(background.include?('CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.9"'), "local update would reject healthy shared tracker")

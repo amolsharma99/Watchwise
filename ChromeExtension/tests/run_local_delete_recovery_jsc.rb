@@ -67,7 +67,7 @@ fixture = <<~JAVASCRIPT
     runtime: {
       id: "watchwise-local-test",
       getURL(path = "") { return `chrome-extension://watchwise-local-test/${path}`; },
-      getManifest() { return { version: "0.4.0" }; },
+      getManifest() { return { version: "0.4.1" }; },
       sendMessage() { return Promise.resolve(); },
       onMessage: { addListener(listener) { messageListener = listener; } },
       onInstalled: { addListener() {} },

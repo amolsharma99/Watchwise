@@ -14,6 +14,14 @@ Local summarisation still needs a supported content source. YouTube's official t
 
 Chrome's Prompt API accepts audio, but audio input requires a GPU. `chrome.tabCapture` requires an explicit extension invocation and records the currently active tab in real time; it cannot quietly preanalyse a video as soon as playback starts. It also adds a sensitive permission and would need an explicit recording consent and revised privacy disclosure. [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) · [Tab capture](https://developer.chrome.com/docs/extensions/reference/api/tabCapture)
 
+## Google AI Studio handoff
+
+The v0.4.1 candidate implements a **user-initiated handoff**, not automatic summarisation inside Watchwise: an “Ask in AI Studio” action appears on standard public YouTube watch pages. A click copies a short prompt and canonical URL, then opens AI Studio; the user pastes, sends, and views the answer there. It uses the AI Studio access already working in the user's account, without an extension API key. Watchwise does not read the signed-in Google session or receive the result. The action never opens a tab automatically for every video. This does not resolve the separate consumer-use eligibility question in Google's terms for a public extension.
+
+Selected AI Studio prompt: “Summarise the video with topics and bullets for each - {url}” (replace `{url}` with the canonical public YouTube watch URL).
+
+I found no documented AI Studio URL parameter that prefills and submits a prompt. A Google AI Developers forum reply described that feature as unsupported, and a later request was still framed as a feature request. Injecting into AI Studio's page to type/click/read the response would depend on a changing authenticated UI, rather than a supported integration. Do not present that as a reliable public Store feature or use it to work around API quotas. [Google forum: prefilled prompts](https://discuss.ai.google.dev/t/is-it-possible-to-link-in-to-google-ai-studio/67036) · [Google forum: later request](https://discuss.ai.google.dev/t/let-users-share-and-auto-submit-ai-studio-prompts-with-a-simple-url/106593) · [Gemini API terms](https://ai.google.dev/gemini-api/terms)
+
 ## Viable next experiment
 
 1. Validate local AI **quality and availability** in an opt-in Labs build using the existing public, bundled sample transcript and a few user-supplied transcripts. Show the model readiness state and whether it actually completes. Treat a transcript-only verdict as a judgment of spoken content, not a fact-check or assessment of unseen visuals.

@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="mark" aria-hidden="true">W</span><div><strong>Watchwise</strong><span id="buildVersion">Watch with intent · loading version</span></div></div>
+    <div class="brand"><img class="mark" src="assets/icon32.png" width="35" height="35" alt=""><div><strong>Watchwise</strong><span id="buildVersion">Watch with intent · loading version</span></div></div>
     <button id="refresh" class="icon-button" title="Refresh dashboard" aria-label="Refresh dashboard">↻</button>
   </header>
 
@@ -32,7 +32,6 @@
     <div id="app" hidden>
       <nav class="tabs" aria-label="Watchwise sections">
         <button class="tab active" data-panel="overview">Overview</button>
-        <button class="tab" data-panel="analyse">Analyse</button>
         <button class="tab" data-panel="settings">Settings</button>
       </nav>
 
@@ -58,31 +57,12 @@
         </section>
       </section>
 
-      <section id="analyse" class="panel" aria-labelledby="analyse-title">
-        <p class="eyebrow">Automatic + manual</p><h1 id="analyse-title">Analyse a public YouTube video</h1>
-        <p class="lede">With AI consent and a saved key, Gemini analyses public YouTube videos automatically after you start watching. Turn this off in Settings, or analyse a URL manually below. Requests may use paid API quota.</p>
-        <form id="analysisForm" class="card form-card">
-          <label for="analysisURL">Public YouTube video URL</label>
-          <input id="analysisURL" name="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off">
-          <button class="button primary" type="submit">Analyse with Gemini</button>
-        </form>
-        <div id="analysisStatus" class="status" role="status" aria-live="polite"></div>
-        <article id="analysisResult" class="card result" hidden>
-          <div class="result-head"><span id="verdict" class="verdict">Pending</span><span id="confidence"></span></div>
-          <h2>Quick take</h2><p id="summary"></p>
-          <h3>Key moments</h3><div id="keyPoints" class="timeline"></div>
-          <h3>Possible skips</h3><div id="skipSegments" class="timeline"></div>
-          <h3>Evidence signals</h3><ul id="evidence"></ul>
-          <p id="caveat" class="caveat"></p>
-        </article>
-      </section>
-
       <section id="settings" class="panel" aria-labelledby="settings-title">
         <p class="eyebrow">Your controls</p><h1 id="settings-title">Settings</h1>
         <section class="card settings-group">
           <label class="switch-row"><span><strong>Track visible videos</strong><small>Off by default; local history only</small></span><input id="trackingEnabled" type="checkbox" role="switch"></label>
           <label class="switch-row"><span><strong>In-page alerts</strong><small>Brief nudges and analysis-ready toasts in video tabs</small></span><input id="notificationsEnabled" type="checkbox" role="switch"></label>
-          <label class="switch-row"><span><strong>Allow Gemini analysis</strong><small>Requires your saved key; manual analysis remains available</small></span><input id="aiConsent" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Allow Gemini API analysis</strong><small>Requires your saved key; separate from the Studio button</small></span><input id="aiConsent" type="checkbox" role="switch"></label>
           <label class="switch-row"><span><strong>Analyse new YouTube videos automatically</strong><small>On by default after consent; meaningful active playback only, and may use paid API quota</small></span><input id="autoAnalysisEnabled" type="checkbox" role="switch"></label>
         </section>
         <section class="card settings-group">
@@ -103,6 +83,18 @@
           <form id="keyForm" class="inline-form"><input id="apiKey" type="password" placeholder="Paste key" autocomplete="off"><button class="button subtle" type="submit">Save</button></form>
           <button id="clearKey" class="text-button">Clear saved key</button>
         </section>
+        <details id="analysisDetails" class="card analysis-detail" hidden>
+          <summary>Latest Gemini API analysis</summary>
+          <div id="analysisStatus" class="status" role="status" aria-live="polite"></div>
+          <article id="analysisResult" class="result" hidden>
+            <div class="result-head"><span id="verdict" class="verdict">Pending</span><span id="confidence"></span></div>
+            <h2>Quick take</h2><p id="summary"></p>
+            <h3>Key moments</h3><div id="keyPoints" class="timeline"></div>
+            <h3>Possible skips</h3><div id="skipSegments" class="timeline"></div>
+            <h3>Evidence signals</h3><ul id="evidence"></ul>
+            <p id="caveat" class="caveat"></p>
+          </article>
+        </details>
         <section class="card settings-group danger-zone">
           <div><h2>Your data</h2><p class="small">Export viewing history, analysis records and safe settings—never the API key—or permanently delete local history.</p></div>
           <div class="button-row"><button id="exportData" class="button subtle">Export JSON</button><button id="deleteData" class="button danger">Delete history</button></div>

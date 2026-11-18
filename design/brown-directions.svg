@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="610" viewBox="0 0 1200 610" role="img" aria-label="Three warm visual directions for Watchwise: Espresso and oat, Cocoa and cream, Ink and caramel">
+  <rect width="1200" height="610" fill="#E9E5DF"/>
+  <style>text{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}.name{font-size:18px;font-weight:700}.label{font-size:10px;font-weight:700;letter-spacing:1.5px}.body{font-size:12px;font-weight:600}.small{font-size:10px}.num{font-size:42px;font-weight:700;letter-spacing:-2px}</style>
+  <g transform="translate(22 20)">
+    <rect width="370" height="558" rx="22" fill="#F7F4EE" stroke="#DCD4C8"/>
+    <text class="name" x="21" y="38" fill="#2E2722">01  Espresso &amp; oat</text>
+    <text class="small" x="21" y="58" fill="#6F665E">Warm, composed, premium</text>
+    <path d="M0 76H370" stroke="#E6DED3"/>
+    <rect x="20" y="94" width="34" height="34" rx="10" fill="#392B24"/><text x="31" y="117" fill="#F7F4EE" font-size="19" font-weight="800">W</text>
+    <text class="body" x="66" y="109" fill="#2E2722">Watchwise</text><text class="small" x="66" y="124" fill="#776E65">Watch with intent</text>
+    <rect x="20" y="146" width="330" height="36" rx="11" fill="#EDE7DD"/>
+    <rect x="23" y="149" width="161" height="30" rx="8" fill="#FFFDF9"/><text class="small" x="79" y="168" fill="#392B24">Overview</text><text class="small" x="253" y="168" fill="#766A5F">Settings</text>
+    <text class="label" x="20" y="216" fill="#A76E4F">YOUR ATTENTION</text><text x="20" y="249" fill="#2E2722" font-size="28" font-weight="700">Today</text>
+    <rect x="20" y="269" width="203" height="119" rx="17" fill="#392B24"/><text class="small" x="36" y="293" fill="#E8DAD0">ACTIVE WATCHING</text><text class="num" x="36" y="350" fill="#FFFFFF">42m</text><text class="small" x="36" y="371" fill="#E8DAD0">Time spent today</text>
+    <rect x="233" y="269" width="117" height="119" rx="17" fill="#FFFDF9" stroke="#E4DDD3"/><text class="small" x="247" y="293" fill="#776E65">VIDEOS STARTED</text><text x="247" y="350" fill="#2E2722" font-size="38" font-weight="700">3</text><text class="small" x="247" y="371" fill="#776E65">Intentional?</text>
+    <rect x="20" y="400" width="330" height="57" rx="14" fill="#FFFDF9" stroke="#E4DDD3"/><text class="body" x="36" y="424" fill="#2E2722">This week</text><text class="body" x="296" y="424" fill="#A76E4F">3h</text><text class="small" x="36" y="443" fill="#776E65">A quieter week starts with one choice.</text>
+    <rect x="20" y="470" width="330" height="67" rx="14" fill="#FFFDF9" stroke="#E4DDD3"/><text class="body" x="36" y="494" fill="#2E2722">Video breakdown</text><path d="M36 509H325" stroke="#E6DED3"/><text class="small" x="36" y="526" fill="#776E65">The videos that used your time</text>
+  </g>
+  <g transform="translate(415 20)">
+    <rect width="370" height="558" rx="22" fill="#FCF8F3" stroke="#E5D5CB"/>
+    <text class="name" x="21" y="38" fill="#392A27">02  Cocoa &amp; cream</text>
+    <text class="small" x="21" y="58" fill="#816D65">Softer, more personal</text>
+    <path d="M0 76H370" stroke="#EEE2D8"/>
+    <rect x="20" y="94" width="34" height="34" rx="10" fill="#765044"/><text x="31" y="117" fill="#FFFFFF" font-size="19" font-weight="800">W</text>
+    <text class="body" x="66" y="109" fill="#392A27">Watchwise</text><text class="small" x="66" y="124" fill="#947B70">Watch with intent</text>
+    <rect x="20" y="146" width="330" height="36" rx="11" fill="#F2E9E2"/>
+    <rect x="23" y="149" width="161" height="30" rx="8" fill="#FFFFFF"/><text class="small" x="79" y="168" fill="#765044">Overview</text><text class="small" x="253" y="168" fill="#947B70">Settings</text>
+    <text class="label" x="20" y="216" fill="#BE7E67">YOUR ATTENTION</text><text x="20" y="249" fill="#392A27" font-size="28" font-weight="700">Today</text>
+    <rect x="20" y="269" width="203" height="119" rx="17" fill="#765044"/><text class="small" x="36" y="293" fill="#F6E9E2">ACTIVE WATCHING</text><text class="num" x="36" y="350" fill="#FFFFFF">42m</text><text class="small" x="36" y="371" fill="#F6E9E2">Time spent today</text>
+    <rect x="233" y="269" width="117" height="119" rx="17" fill="#FFFFFF" stroke="#EADCD3"/><text class="small" x="247" y="293" fill="#947B70">VIDEOS STARTED</text><text x="247" y="350" fill="#392A27" font-size="38" font-weight="700">3</text><text class="small" x="247" y="371" fill="#947B70">Intentional?</text>
+    <rect x="20" y="400" width="330" height="57" rx="14" fill="#FFFFFF" stroke="#EADCD3"/><text class="body" x="36" y="424" fill="#392A27">This week</text><text class="body" x="296" y="424" fill="#BE7E67">3h</text><text class="small" x="36" y="443" fill="#947B70">A quieter week starts with one choice.</text>
+    <rect x="20" y="470" width="330" height="67" rx="14" fill="#FFFFFF" stroke="#EADCD3"/><text class="body" x="36" y="494" fill="#392A27">Video breakdown</text><path d="M36 509H325" stroke="#EEE2D8"/><text class="small" x="36" y="526" fill="#947B70">The videos that used your time</text>
+  </g>
+  <g transform="translate(808 20)">
+    <rect width="370" height="558" rx="22" fill="#F2EFE9" stroke="#D7D2C9"/>
+    <text class="name" x="21" y="38" fill="#22211E">03  Ink &amp; caramel</text>
+    <text class="small" x="21" y="58" fill="#6D6961">Crisp, editorial, restrained</text>
+    <path d="M0 76H370" stroke="#DEDBD4"/>
+    <rect x="20" y="94" width="34" height="34" rx="10" fill="#252420"/><text x="31" y="117" fill="#FFFFFF" font-size="19" font-weight="800">W</text>
+    <text class="body" x="66" y="109" fill="#22211E">Watchwise</text><text class="small" x="66" y="124" fill="#777168">Watch with intent</text>
+    <rect x="20" y="146" width="330" height="36" rx="11" fill="#E6E1D8"/>
+    <rect x="23" y="149" width="161" height="30" rx="8" fill="#FAF9F6"/><text class="small" x="79" y="168" fill="#252420">Overview</text><text class="small" x="253" y="168" fill="#777168">Settings</text>
+    <text class="label" x="20" y="216" fill="#9B724D">YOUR ATTENTION</text><text x="20" y="249" fill="#22211E" font-size="28" font-weight="700">Today</text>
+    <rect x="20" y="269" width="203" height="119" rx="17" fill="#252420"/><text class="small" x="36" y="293" fill="#DED9D0">ACTIVE WATCHING</text><text class="num" x="36" y="350" fill="#FFFFFF">42m</text><text class="small" x="36" y="371" fill="#DED9D0">Time spent today</text>
+    <rect x="233" y="269" width="117" height="119" rx="17" fill="#FAF9F6" stroke="#DDD8CF"/><text class="small" x="247" y="293" fill="#777168">VIDEOS STARTED</text><text x="247" y="350" fill="#22211E" font-size="38" font-weight="700">3</text><text class="small" x="247" y="371" fill="#777168">Intentional?</text>
+    <rect x="20" y="400" width="330" height="57" rx="14" fill="#FAF9F6" stroke="#DDD8CF"/><text class="body" x="36" y="424" fill="#22211E">This week</text><text class="body" x="296" y="424" fill="#9B724D">3h</text><text class="small" x="36" y="443" fill="#777168">A quieter week starts with one choice.</text>
+    <rect x="20" y="470" width="330" height="67" rx="14" fill="#FAF9F6" stroke="#DDD8CF"/><text class="body" x="36" y="494" fill="#22211E">Video breakdown</text><path d="M36 509H325" stroke="#DEDBD4"/><text class="small" x="36" y="526" fill="#777168">The videos that used your time</text>
+  </g>
+</svg>

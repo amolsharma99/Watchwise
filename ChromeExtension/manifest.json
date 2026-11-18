@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Watchwise",
-  "version": "0.3.9",
+  "version": "0.3.14",
   "minimum_chrome_version": "116",
   "description": "Private, intentional video-watching insights with optional Gemini analysis.",
   "permissions": [
@@ -40,6 +40,18 @@
       "matches": ["https://*/*"],
       "js": ["content.js"],
       "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://youtube.com/*", "https://*.youtube.com/*"],
+      "js": ["studio-handoff.js"],
+      "all_frames": false,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://aistudio.google.com/prompts/*"],
+      "js": ["studio-prefill.js"],
+      "all_frames": false,
       "run_at": "document_idle"
     }
   ],

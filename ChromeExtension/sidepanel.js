@@ -171,6 +171,7 @@ function makeMoment(point, job) {
 function renderJob(job) {
   if (job && !shouldAcceptAnalysisJobUpdate(renderedAnalysisJob, job)) return;
   renderedAnalysisJob = job || null;
+  $("#analysisDetails").hidden = !job;
   const status = $("#analysisStatus");
   const resultCard = $("#analysisResult");
   if (!job) {
@@ -260,7 +261,6 @@ function render(state) {
   setText("#keyStatus", state.apiKeyConfigured ? "Saved for this extension" : "Not saved");
   $("#clearKey").disabled = !state.apiKeyConfigured;
   renderJob(state.activeJob);
-  if (state.currentPublicURL && !$("#analysisURL").value) $("#analysisURL").value = state.currentPublicURL;
 }
 
 async function refresh() {
@@ -337,13 +337,6 @@ $("#keyForm").addEventListener("submit", async (event) => {
 $("#clearKey").addEventListener("click", async () => {
   try { await send("CLEAR_API_KEY"); notify("Gemini key cleared."); await refresh(); }
   catch (error) { notify(error.message, true); }
-});
-$("#analysisForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    const response = await send("ANALYZE_URL", { url: $("#analysisURL").value.trim() });
-    renderJob(response.job);
-  } catch (error) { $("#analysisStatus").textContent = error.message; }
 });
 $("#exportData").addEventListener("click", async () => {
   try {

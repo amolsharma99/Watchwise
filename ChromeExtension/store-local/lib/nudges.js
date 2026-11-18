@@ -3,14 +3,12 @@ import { isExcludedSite, isQuietTime, normalizeSettings } from "./settings.js";
 export const NUDGE_KINDS = Object.freeze({ DAILY_LIMIT: "daily_limit", LONG_SESSION: "long_session", RABBIT_HOLE: "rabbit_hole" });
 
 function nudgeCopy(kind, context) {
-  const minutes = Math.max(1, Math.floor(context.dailyActiveSeconds / 60));
-  const sessionMinutes = Math.max(1, Math.floor(context.activeSessionSeconds / 60));
   const isYouTube = /(?:^|\.)youtube\.com$/.test(String(context.pageSite || ""));
   if (kind === NUDGE_KINDS.DAILY_LIMIT) return isYouTube
-    ? ["You have watched about " + minutes + " minutes today.", "The algorithm has a sequel ready. Your daily target says this is a fine place for credits."]
-    : ["Your viewing target has clocked out.", "You have watched about " + minutes + " minutes today. Want to join it?"];
-  if (kind === NUDGE_KINDS.RABBIT_HOLE) return ["The video parade is growing.", "A few videos in quick succession. Was there one thing you came to find?"];
-  if (kind === NUDGE_KINDS.LONG_SESSION) return ["Still on the clock?", "About " + sessionMinutes + " minutes in this stretch. This video has had its audition; is it still worth your time?"];
+    ? ["The algorithm wants an encore 🎬", "Your viewing target is done. Please leave if the next video isn't giving you what you came for."]
+    : ["Your time is asking for a turn 🌱", "You've reached your viewing target. If this isn't valuable, please close it and take your time back."];
+  if (kind === NUDGE_KINDS.RABBIT_HOLE) return ["The feed has momentum 👀", "A few videos in a row. Please choose your next step, or close the tab and reclaim it."];
+  if (kind === NUDGE_KINDS.LONG_SESSION) return ["Still worth staying? ⏳", "You've been here a while. If the useful part is over, please let yourself leave."];
   return ["A quick check-in", "Is this still helping with your plan?"];
 }
 

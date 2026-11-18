@@ -515,16 +515,24 @@ await test("nudge cooldown and hourly limit are deterministic", () => {
   equal(engine.evaluate({ ...context, nowMs: BASE + 700_000 }, settings).suppression, "hourly_limit");
 });
 
-await test("nudge copy uses only safe aggregate context", () => {
+await test("nudge copy uses context without exposing titles or minute counts", () => {
   const settings = { trackingEnabled: true, notificationsEnabled: true, dailyLimitSeconds: 300 };
   const context = { nowMs: BASE, pageSite: "www.youtube.com", dailyActiveSeconds: 610, activeSessionSeconds: 60, distinctSessionsLast20Minutes: 1, playbackRate: 1, positionSeconds: 1, mediaTitle: "Private medical concern" };
   const daily = new NudgeEngine().evaluate(context, settings).nudge;
-  assert(daily.message.includes("daily target"));
-  assert(daily.title.includes("10 minutes"));
+  assert(daily.message.includes("viewing target"));
+  assert(daily.title.includes("encore"));
   assert(!JSON.stringify(daily).includes(context.mediaTitle));
   const otherSite = new NudgeEngine().evaluate({ ...context, pageSite: "netflix.com" }, settings).nudge;
-  assert(otherSite.message.includes("10 minutes"));
-  assert(!otherSite.title.includes("algorithm"));
+  assert(otherSite.message.includes("take your time back"));
+  const rabbit = new NudgeEngine().evaluate({ ...context, dailyActiveSeconds: 10, activeSessionSeconds: 10, distinctSessionsLast20Minutes: 5 }, { ...settings, dailyLimitSeconds: 10_000, longSessionSeconds: 10_000 }).nudge;
+  const long = new NudgeEngine().evaluate({ ...context, dailyActiveSeconds: 10, activeSessionSeconds: 2_000, distinctSessionsLast20Minutes: 1 }, { ...settings, dailyLimitSeconds: 10_000, longSessionSeconds: 1_000 }).nudge;
+  assert(rabbit.message.includes("choose your next step"));
+  assert(long.message.includes("let yourself leave"));
+  for (const nudge of [daily, otherSite, rabbit, long]) {
+    const visible = `${nudge.title} ${nudge.message}`;
+    assert(!/\b\d+\s*minutes?\b/i.test(visible));
+    assert((visible.match(/[✨🎬🌱⏳👀🎯👋🍿]/gu) || []).length <= 1);
+  }
 });
 
 function goalProgressEvents({ id = "goal", url = "https://www.youtube.com/watch?v=goal", startMs = BASE, seconds = 15, tabID = 4, frameID = 0, sessionID = "goal-session", playerID = "goal-player", frameSite = "www.youtube.com", pageSite = "www.youtube.com" } = {}) {
@@ -558,19 +566,22 @@ await test("goal check-in copy varies with context without echoing titles", () =
   equal(goalCheckInMessage(), GOAL_CHECKIN_MESSAGE);
   const tutorial = goalProgressEvents({ id: "learning", url: "https://www.youtube.com/watch?v=learning" }).map((item) => ({ ...item, mediaTitle: "How to discuss a private medical concern" }));
   const learningMessage = goalCheckInMessage(tutorial.at(-1), tutorial);
-  assert(learningMessage.includes("tutorial") || learningMessage.includes("Learning"));
-  assert(!learningMessage.includes("private medical concern"));
+  assert(learningMessage.includes("answer") || learningMessage.includes("question"), "learning copy did not use tutorial context");
+  assert(!learningMessage.includes("private medical concern"), "learning copy exposed title");
   equal(learningMessage, goalCheckInMessage(tutorial.at(-1), tutorial));
 
   const streaming = goalProgressEvents({ id: "streaming", url: "https://www.netflix.com/watch/123", frameSite: "www.netflix.com", pageSite: "www.netflix.com" });
-  assert(/scene|plot twist/i.test(goalCheckInMessage(streaming.at(-1), streaming)));
+  assert(/story|plot twist/i.test(goalCheckInMessage(streaming.at(-1), streaming)), "streaming copy did not use site context");
 
   const rapid = [
     ...goalProgressEvents({ id: "one", url: "https://www.youtube.com/watch?v=one", sessionID: "one", startMs: BASE }),
     ...goalProgressEvents({ id: "two", url: "https://www.youtube.com/watch?v=two", sessionID: "two", startMs: BASE + 20_000 }),
     ...goalProgressEvents({ id: "three", url: "https://www.youtube.com/watch?v=three", sessionID: "three", startMs: BASE + 40_000 })
   ];
-  assert(/feed|tasting menu/i.test(goalCheckInMessage(rapid.at(-1), rapid)));
+  assert(/feed|another video/i.test(goalCheckInMessage(rapid.at(-1), rapid)), "rapid copy did not use streak context");
+  for (const message of [learningMessage, goalCheckInMessage(streaming.at(-1), streaming), goalCheckInMessage(rapid.at(-1), rapid), goalCheckInMessage(tutorial[0], [])]) {
+    assert((message.match(/[✨🎬🌱⏳👀🎯👋🍿]/gu) || []).length <= 1, "goal copy used more than one emoji");
+  }
 });
 
 await test("goal check-in suppression crosses the threshold without later backfill", () => {

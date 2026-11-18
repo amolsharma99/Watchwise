@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="mark" aria-hidden="true">W</span><div><strong>Watchwise</strong><span id="buildVersion">Watch with intent · loading version</span></div></div>
+    <div class="brand"><img class="mark" src="assets/icon32.png" width="35" height="35" alt=""><div><strong>Watchwise</strong><span id="buildVersion">Watch with intent · loading version</span></div></div>
     <button id="refresh" class="icon-button" title="Refresh dashboard" aria-label="Refresh dashboard">↻</button>
   </header>
 
@@ -29,6 +29,7 @@
         <li>Titles come only from media attributes, Media Session, page title metadata and, on Netflix /watch/ pages, exact player-title metadata</li>
         <li>History stays in this browser’s IndexedDB</li>
         <li>Local records are AES-256-GCM encrypted before storage; the non-exportable key stays in this Chrome profile</li>
+        <li>On a standard YouTube video, “Ask in AI Studio” copies a public video URL and prompt only when you click it. You choose whether to paste and send them in Studio; Watchwise does not receive its answer.</li>
       </ul>
       <label class="check"><input id="onboardTracking" type="checkbox"><span>Enable local video tracking</span></label>
       <button id="finishOnboarding" class="button primary">Continue</button>

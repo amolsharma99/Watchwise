@@ -57,11 +57,13 @@ end
 def validate_stage!(stage, archive_files)
   manifest = JSON.parse(File.read(File.join(stage, "manifest.json")))
   fail!("Manifest V3 required") unless manifest["manifest_version"] == 3
-  fail!("local Store version must be 0.4.0") unless manifest["version"] == "0.4.0"
+  fail!("local Store version must be 0.4.1") unless manifest["version"] == "0.4.1"
   fail!("minimum Chrome 116 required") unless manifest["minimum_chrome_version"] == "116"
   fail!("permissions must be exactly scripting, sidePanel") unless manifest["permissions"] == %w[scripting sidePanel]
   fail!("host permission must be exactly https://*/*") unless manifest["host_permissions"] == ["https://*/*"]
   fail!("incognito must be disabled") unless manifest["incognito"] == "not_allowed"
+  handoff = Array(manifest["content_scripts"]).find { |entry| entry["js"] == ["studio-handoff.js"] }
+  fail!("standard YouTube handoff script must run in top frame only") unless handoff && handoff["all_frames"] == false && handoff["run_at"] == "document_idle" && handoff["matches"] == ["https://youtube.com/*", "https://*.youtube.com/*"]
   fail!("unsafe CSP") unless manifest.dig("content_security_policy", "extension_pages") == "script-src 'self'; object-src 'self'"
 
   referenced = [manifest.dig("background", "service_worker"), manifest.dig("side_panel", "default_path"), manifest["options_page"]]
@@ -97,7 +99,7 @@ def validate_stage!(stage, archive_files)
     "alternate network API" => /\bXMLHttpRequest\b|\bWebSocket\b|\bEventSource\b|navigator\.sendBeacon/,
     "model feature setting" => /aiEnabled|autoAnalysisEnabled|ANALYZE_URL/,
     "model data store" => /analysis(?:Jobs|Results|Sources)/i,
-    "model-facing copy" => /\banalys(?:is|e|ing|ed)\b|\bAI\b/i,
+    "model-facing copy outside user-initiated handoff" => /\banalys(?:is|e|ing|ed)\b|\bAI\b/i,
     "alarm API" => /chrome\.alarms|["']alarms["']/,
     "legacy storage API" => /chrome\.storage/,
     "seek capability" => /SEEK_PLAYER|SEEK_TIMESTAMP|suggestedTimestampSeconds|type:\s*["']seek["']/,
@@ -106,7 +108,11 @@ def validate_stage!(stage, archive_files)
   secret_patterns = { "Google credential" => /AIza[0-9A-Za-z_-]{30,}/, "private key" => /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/, "bearer secret" => /Bearer\s+[0-9A-Za-z._-]{24,}/i }
   archive_files.grep(/\.(?:js|json|html|css|txt)\z/).each do |relative|
     source = File.read(File.join(stage, relative))
-    forbidden_tokens.each { |label, pattern| fail!("#{label} in #{relative}") if source.match?(pattern) }
+    forbidden_tokens.each do |label, pattern|
+      checked = label.start_with?("model-facing copy") ? source.gsub(/\bAI Studio\b/i, "Studio") : source
+      next if label.start_with?("model-facing copy") && relative == "studio-handoff.js"
+      fail!("#{label} in #{relative}") if checked.match?(pattern)
+    end
     secret_patterns.each { |label, pattern| fail!("#{label} in #{relative}") if source.match?(pattern) }
     fail!("remote executable code in #{relative}") if source.match?(/<script\b[^>]*\bsrc=["']https?:\/\//i) || source.match?(/\b(?:import|export)\s+(?:[^;]*?\s+from\s+)?["']https?:\/\//) || source.match?(/\bimport\s*\(\s*["']https?:\/\//) || source.match?(/\bimportScripts\s*\([^)]*https?:\/\//) || source.match?(/\beval\s*\(/) || source.match?(/\bnew\s+Function\s*\(/)
   end

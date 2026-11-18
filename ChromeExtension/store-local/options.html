@@ -3,11 +3,12 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Watchwise options</title><link rel="stylesheet" href="options.css"></head>
 <body>
   <main>
-    <div class="brand"><span>W</span><div><h1>Watchwise options</h1><p>Privacy and tracking essentials</p></div></div>
+    <div class="brand"><img src="assets/icon48.png" width="48" height="48" alt=""><div><h1>Watchwise options</h1><p>Privacy and tracking essentials</p></div></div>
     <section>
       <h2>Site access disclosure</h2>
       <p>Watchwise requests access to HTTPS pages so it can detect visible HTML5 video elements across sites and embedded frames. After you opt in, it records only basic playback telemetry. It never captures pixels, audio, captions, arbitrary page-body text, cookies or form contents. Titles come only from media attributes, Media Session, page title metadata and, on Netflix /watch/ pages, exact player-title metadata.</p>
       <p>Watchwise encrypts local records with AES-256-GCM before storage. The non-exportable encryption key remains in this Chrome profile; this is local at-rest protection, not password-based or end-to-end encryption.</p>
+      <p>On standard YouTube watch pages, the optional “Ask in AI Studio” button copies the public video URL and a prepared prompt only when clicked. It opens Studio for you to paste and send; Watchwise does not read your Google account or the answer. Shorts do not show this button.</p>
       <label><span><strong>Track visible videos</strong><small>Local IndexedDB history; off by default</small></span><input id="tracking" type="checkbox" role="switch"></label>
       <label><span><strong>In-page alerts</strong><small>Brief local nudges in video tabs</small></span><input id="notifications" type="checkbox" role="switch"></label>
     </section>

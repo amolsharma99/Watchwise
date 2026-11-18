@@ -7,24 +7,24 @@ export const GOAL_CHECKIN_THRESHOLD_SECONDS = 15;
 export const GOAL_CHECKIN_MIN_GAP_MS = 60_000;
 
 const GENERAL_CHECK_INS = Object.freeze([
-  "A tiny note from Future You: what did you come here to find?",
-  "The play button is persuasive. Is this video helping with your plan?",
-  "You owe the algorithm nothing. Is the next minute worth yours?",
-  "Respectfully begging: if this is not your mission, close the tab before it adopts you.",
-  "Autoplay has applied for overtime. Please do not approve it by accident.",
+  "Future You would love this time back. If you came for one answer, skip to it. ✨",
+  "This video has a retention strategy. Do you have an exit strategy? 👀",
+  "Please don't stay just because it started. You can close it now. 🌱",
+  "Autoplay has plans for you. Do you still choose this video? 🎯",
+  "If the useful part is over, please take your time back. 👋",
   GOAL_CHECKIN_MESSAGE
 ]);
 const LEARNING_CHECK_INS = Object.freeze([
-  "Learning mission check: do you know the answer you came for? Skip ahead if it is still hiding.",
-  "A tutorial can take its time. Your question does not have to. Is this the useful part yet?"
+  "Is your answer here yet? Please skip the long intro and take the useful bit. 🎯",
+  "Your question matters more than the intro. If this isn't helping, please move on. ✨"
 ]);
 const STREAMING_CHECK_INS = Object.freeze([
-  "The next scene will wait. Did you mean to settle in for this one?",
-  "A little plot twist: you can pause here and come back when you really want to watch."
+  "This story will wait. If this wasn't your plan, please take your time back. 🍿",
+  "Plot twist: you can leave before the outro. 🎬"
 ]);
 const RAPID_CHECK_INS = Object.freeze([
-  "A few videos in a row? The feed has a plan. Do you?",
-  "The algorithm brought a tasting menu. Please, you can leave the restaurant."
+  "The feed has momentum. Please choose your next step, or close it here. 👀",
+  "Another video already? Your goal is still waiting. Please take the wheel. 🎯"
 ]);
 
 function stableVariant(identity, count) {

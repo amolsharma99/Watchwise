@@ -52,7 +52,7 @@ fixture = <<~JAVASCRIPT
   let dashboardAvailable = false;
   globalThis.chrome = {
     runtime: {
-      getManifest() { return { version: "0.4.0" }; },
+      getManifest() { return { version: "0.4.1" }; },
       async sendMessage(message) {
         sent.push(message.type);
         if (message.type === "RESET_SECURE_STORAGE") {
@@ -62,7 +62,7 @@ fixture = <<~JAVASCRIPT
         }
         if (message.type === "GET_DASHBOARD_STATE" && !dashboardAvailable) return { ok: false, code: "secure_storage_unavailable", error: "Encrypted data unavailable" };
         if (message.type === "GET_DASHBOARD_STATE") return { ok: true, state: {
-          extensionVersion: "0.4.0", onboardingComplete: false,
+          extensionVersion: "0.4.1", onboardingComplete: false,
           settings: { trackingEnabled: false, notificationsEnabled: true, excludedSites: [], quietHoursStartMinute: 1320, quietHoursEndMinute: 480, dailyLimitSeconds: 3600 },
           today: { activeSeconds: 0, videosStarted: 0, sites: [], videos: [] },
           week: { activeSeconds: 0, videosStarted: 0, videos: [] }, previousWeekActiveSeconds: 0,
