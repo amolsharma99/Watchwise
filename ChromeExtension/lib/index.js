@@ -6,3 +6,4 @@ export * from "./analysis.js";
 export * from "./storage.js";
 export * from "./auto-analysis.js";
 export * from "./gemini-protocol.js";
+export * from "./goal-checkin.js";

@@ -3,6 +3,7 @@ import {
   InMemoryRepository,
   IndexedDBRepository,
   NudgeEngine,
+  activeSessionSeconds,
   ProviderProtocolError,
   analysisResultFromInteraction,
   aiEvidenceFromResult,
@@ -17,9 +18,14 @@ import {
   createAnalysisJob,
   dayWindow,
   distinctSessionsInWindow,
+  evaluateGoalCheckIn,
+  GOAL_CHECKIN_MESSAGE,
+  GOAL_CHECKIN_MIN_GAP_MS,
+  meaningfulGoalPlaybackSeconds,
   normalizeSettings,
   interactionDisposition,
   interactionID,
+  isGoalPlaybackActive,
   isUnidentifiedYouTubeURL,
   modelOutputText,
   restartAction,
@@ -502,6 +508,132 @@ await test("nudge cooldown and hourly limit are deterministic", () => {
   assert(engine.evaluate(context, settings).nudge);
   equal(engine.evaluate({ ...context, nowMs: BASE + 60_000 }, settings).suppression, "cooldown");
   equal(engine.evaluate({ ...context, nowMs: BASE + 700_000 }, settings).suppression, "hourly_limit");
+});
+
+function goalProgressEvents({ id = "goal", url = "https://www.youtube.com/watch?v=goal", startMs = BASE, seconds = 15, tabID = 4, frameID = 0, sessionID = "goal-session", playerID = "goal-player", frameSite = "www.youtube.com", pageSite = "www.youtube.com" } = {}) {
+  const shared = { url, tabID, frameID, sessionID, playerID, frameSite, pageSite, mediaTitle: "Goal video" };
+  return [
+    event({ ...shared, eventID: `${id}-start`, occurredAtMs: startMs, positionSeconds: 0, state: "playing" }),
+    event({ ...shared, eventID: `${id}-progress`, occurredAtMs: startMs + seconds * 1_000, positionSeconds: seconds, state: "heartbeat" })
+  ];
+}
+
+await test("goal check-in fires at 15 meaningful seconds exactly once", () => {
+  const settings = { trackingEnabled: true, notificationsEnabled: true };
+  const below = goalProgressEvents({ id: "below", seconds: 14.9 });
+  const belowDecision = evaluateGoalCheckIn({ events: below, event: below.at(-1), settings, nowMs: BASE + 14_900 });
+  equal(belowDecision.shouldPrompt, false);
+  equal(belowDecision.suppression, "threshold");
+  near(belowDecision.meaningfulSeconds, 14.9);
+
+  const threshold = goalProgressEvents({ id: "threshold", seconds: 15 });
+  const first = evaluateGoalCheckIn({ events: threshold, event: threshold.at(-1), settings, state: belowDecision.state, nowMs: BASE + 15_000 });
+  equal(first.shouldPrompt, true);
+  equal(first.message, GOAL_CHECKIN_MESSAGE);
+  equal(first.message, "Hope you’re clear on your goal for watching this video.");
+  const restartedState = JSON.parse(JSON.stringify(first.state));
+  const repeated = evaluateGoalCheckIn({ events: [...threshold, event({ eventID: "threshold-repeat", sessionID: "goal-session", playerID: "goal-player", url: "https://www.youtube.com/watch?v=goal", mediaTitle: "Goal video", occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" })], event: event({ eventID: "threshold-target", sessionID: "goal-session", playerID: "goal-player", url: "https://www.youtube.com/watch?v=goal", mediaTitle: "Goal video", occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" }), settings, state: restartedState, nowMs: BASE + 20_000 });
+  equal(repeated.shouldPrompt, false);
+  equal(repeated.suppression, "already_processed");
+});
+
+await test("goal check-in suppression crosses the threshold without later backfill", () => {
+  const events = goalProgressEvents({ id: "suppressed", url: "https://video.example/watch", sessionID: "suppressed-session", frameSite: "video.example", pageSite: "video.example" });
+  const target = events.at(-1);
+  const localMinute = new Date(BASE + 15_000).getUTCHours() * 60 + new Date(BASE + 15_000).getUTCMinutes();
+  const cases = [
+    [{ trackingEnabled: false, notificationsEnabled: true }, "tracking_off"],
+    [{ trackingEnabled: true, notificationsEnabled: false }, "notifications_off"],
+    [{ trackingEnabled: true, notificationsEnabled: true, movieModeUntilMs: BASE + 60_000 }, "movie_mode"],
+    [{ trackingEnabled: true, notificationsEnabled: true, snoozedUntilMs: BASE + 60_000 }, "snoozed"],
+    [{ trackingEnabled: true, notificationsEnabled: true, quietHoursEnabled: true, quietHoursStartMinute: localMinute, quietHoursEndMinute: (localMinute + 1) % 1440 }, "quiet_hours"],
+    [{ trackingEnabled: true, notificationsEnabled: true, excludedSites: ["video.example"] }, "site_excluded"]
+  ];
+  for (const [settings, expected] of cases) {
+    const suppressed = evaluateGoalCheckIn({ events, event: target, settings, nowMs: BASE + 15_000, offsetMinutes: 0 });
+    equal(suppressed.shouldPrompt, false);
+    equal(suppressed.suppression, expected);
+    const allowedLater = evaluateGoalCheckIn({ events, event: target, settings: { trackingEnabled: true, notificationsEnabled: true }, state: suppressed.state, nowMs: BASE + 120_000 });
+    equal(allowedLater.suppression, "already_processed", `${expected} was backfilled later`);
+  }
+});
+
+await test("goal progress unions replacement frames but not tabs, episodes, or seeks", () => {
+  const sameVideo = [
+    ...goalProgressEvents({ id: "watch-frame", seconds: 10, url: "https://www.youtube.com/watch?v=shared", sessionID: "watch-frame", playerID: "watch-player" }),
+    ...goalProgressEvents({ id: "embed-frame", seconds: 10, url: "https://www.youtube.com/embed/shared", sessionID: "embed-frame", playerID: "embed-player", frameID: 2 }),
+    ...goalProgressEvents({ id: "replacement", startMs: BASE + 10_000, seconds: 5, url: "https://www.youtube.com/shorts/shared", sessionID: "replacement", playerID: "replacement-player" })
+  ];
+  near(meaningfulGoalPlaybackSeconds(sameVideo, sameVideo.at(-1)), 15);
+
+  const otherTab = goalProgressEvents({ id: "other-tab", seconds: 10, url: "https://www.youtube.com/watch?v=shared", tabID: 8, sessionID: "other-tab" });
+  near(meaningfulGoalPlaybackSeconds([...sameVideo.slice(0, 2), ...otherTab], otherTab.at(-1)), 10);
+
+  const laterEpisode = goalProgressEvents({ id: "later", seconds: 10, url: "https://www.youtube.com/watch?v=shared", startMs: BASE + 5 * 60_000, sessionID: "later" });
+  near(meaningfulGoalPlaybackSeconds([...sameVideo.slice(0, 2), ...laterEpisode], laterEpisode.at(-1)), 10);
+  const newStartOnly = event({ eventID: "new-start-only", sessionID: "new-start-only", playerID: "new-start-only", url: "https://www.youtube.com/watch?v=shared", occurredAtMs: BASE + 5 * 60_000, positionSeconds: 0, state: "playing" });
+  near(meaningfulGoalPlaybackSeconds([...sameVideo.slice(0, 2), newStartOnly], newStartOnly), 0);
+
+  const seek = [event({ eventID: "seek-a", sessionID: "seek", playerID: "seek", occurredAtMs: BASE, positionSeconds: 0 }), event({ eventID: "seek-b", sessionID: "seek", playerID: "seek", occurredAtMs: BASE + 1_000, positionSeconds: 300, state: "heartbeat" })];
+  near(meaningfulGoalPlaybackSeconds(seek, seek.at(-1)), 0);
+  for (const [label, overrides] of [["paused", { state: "paused" }], ["seeking", { state: "seeking" }], ["hidden", { isVisible: false }], ["inactive", { isTabActive: false }]]) {
+    const pair = [event({ eventID: `${label}-a`, sessionID: label, playerID: label, occurredAtMs: BASE, positionSeconds: 0, ...overrides }), event({ eventID: `${label}-b`, sessionID: label, playerID: label, occurredAtMs: BASE + 20_000, positionSeconds: 20, state: "heartbeat" })];
+    near(meaningfulGoalPlaybackSeconds(pair, pair.at(-1)), 0, 0.0001, `${label} playback counted toward goal threshold`);
+  }
+});
+
+await test("goal delivery requires the reserved stream to remain active and visible", () => {
+  const active = goalProgressEvents({ id: "active-delivery", seconds: 15 });
+  equal(isGoalPlaybackActive(active, active.at(-1), BASE + 15_000), true);
+  const paused = event({ ...active.at(-1), eventID: "active-delivery-paused", occurredAtMs: BASE + 16_000, positionSeconds: 16, state: "paused" });
+  equal(isGoalPlaybackActive([...active, paused], active.at(-1), BASE + 16_000), false);
+  const hidden = event({ ...active.at(-1), eventID: "active-delivery-hidden", occurredAtMs: BASE + 16_000, positionSeconds: 16, state: "heartbeat", isVisible: false });
+  equal(isGoalPlaybackActive([...active, hidden], active.at(-1), BASE + 16_000), false);
+  equal(isGoalPlaybackActive(active, active.at(-1), BASE + 46_000), false);
+});
+
+await test("goal cadence keeps a distinct active video pending until the brief gap", () => {
+  const settings = { trackingEnabled: true, notificationsEnabled: true };
+  const firstEvents = goalProgressEvents({ id: "first-goal", url: "https://www.youtube.com/watch?v=first-goal", sessionID: "first-goal" });
+  const first = evaluateGoalCheckIn({ events: firstEvents, event: firstEvents.at(-1), settings, nowMs: BASE + 15_000 });
+  assert(first.shouldPrompt);
+
+  const secondEvents = goalProgressEvents({ id: "second-goal", url: "https://www.youtube.com/watch?v=second-goal", sessionID: "second-goal", startMs: BASE + 30_000 });
+  const pending = evaluateGoalCheckIn({ events: secondEvents, event: secondEvents.at(-1), settings, state: first.state, nowMs: BASE + 45_000 });
+  equal(pending.shouldPrompt, false);
+  equal(pending.suppression, "cadence");
+  equal(pending.state.processed.some((entry) => entry.identity === "youtube:second-goal"), false);
+
+  const stillActive = event({ eventID: "second-still-active", sessionID: "second-goal", playerID: "goal-player", url: "https://www.youtube.com/watch?v=second-goal", mediaTitle: "Goal video", occurredAtMs: BASE + 75_000, positionSeconds: 45, state: "heartbeat" });
+  const delivered = evaluateGoalCheckIn({ events: [...secondEvents, stillActive], event: stillActive, settings, state: pending.state, nowMs: BASE + 75_000 });
+  equal(GOAL_CHECKIN_MIN_GAP_MS, 60_000);
+  equal(delivered.shouldPrompt, true);
+
+  const afterExistingNudge = evaluateGoalCheckIn({ events: secondEvents, event: secondEvents.at(-1), settings, nowMs: BASE + 45_000, lastInterventionAtMs: BASE + 20_000 });
+  equal(afterExistingNudge.suppression, "cadence");
+  equal(afterExistingNudge.state.processed.length, 0);
+});
+
+await test("goal canonical identity is retained for 24 hours then permits a fresh episode", () => {
+  const settings = { trackingEnabled: true, notificationsEnabled: true };
+  const firstEvents = goalProgressEvents({ id: "retention-first", url: "https://www.youtube.com/watch?v=retained", sessionID: "retention-first" });
+  const first = evaluateGoalCheckIn({ events: firstEvents, event: firstEvents.at(-1), settings, nowMs: BASE + 15_000 });
+  assert(first.shouldPrompt);
+
+  const replay23 = goalProgressEvents({ id: "retention-23", url: "https://www.youtube.com/watch?v=retained", sessionID: "retention-23", startMs: BASE + 23 * 60 * 60_000 });
+  const withinWindow = evaluateGoalCheckIn({ events: replay23, event: replay23.at(-1), settings, state: first.state, nowMs: BASE + 23 * 60 * 60_000 + 15_000 });
+  equal(withinWindow.suppression, "already_processed");
+
+  const replay25 = goalProgressEvents({ id: "retention-25", url: "https://www.youtube.com/watch?v=retained", sessionID: "retention-25", startMs: BASE + 25 * 60 * 60_000 });
+  const afterWindow = evaluateGoalCheckIn({ events: replay25, event: replay25.at(-1), settings, state: first.state, nowMs: BASE + 25 * 60 * 60_000 + 15_000 });
+  equal(afterWindow.shouldPrompt, true);
+});
+
+await test("current-stream nudge context is not taken from another concurrent player", () => {
+  const current = goalProgressEvents({ id: "current-stream", seconds: 5, url: "https://video.example/current", sessionID: "current-stream", playerID: "current-stream", frameSite: "video.example", pageSite: "video.example" });
+  const other = goalProgressEvents({ id: "other-stream", seconds: 40, url: "https://video.example/other", sessionID: "other-stream", playerID: "other-stream", startMs: BASE + 1_000, frameSite: "video.example", pageSite: "video.example" });
+  near(activeSessionSeconds(current, BASE + 5_000), 5);
+  assert(activeSessionSeconds([...current, ...other], BASE + 41_000) > 30);
 });
 
 await test("analysis job survives JSON restart and resumes safely", () => {

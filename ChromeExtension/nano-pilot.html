@@ -12,8 +12,10 @@
     <p>This trial uses the public, English auto-generated transcript of <a href="https://www.youtube.com/watch?v=hBzwILrci60" target="_blank" rel="noopener">Harsha Bhogle looks ahead to the Test series</a>. It does not send the transcript to Gemini API or change Watchwise settings.</p>
     <section>
       <h2>Model readiness</h2>
-      <p id="summarizerStatus" role="status">Checking Summarizer…</p>
-      <p id="promptStatus" role="status">Checking Prompt API…</p>
+      <p>Chrome may need to download an on-device model. Watchwise checks only when you ask.</p>
+      <button id="checkAvailability">Check local AI availability</button>
+      <p id="summarizerStatus" role="status">Summarizer: not checked</p>
+      <p id="promptStatus" role="status">Prompt API: not checked</p>
     </section>
     <section>
       <h2>Summary</h2>

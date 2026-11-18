@@ -14,13 +14,18 @@ import {
   createAnalysisJob,
   dayWindow,
   distinctSessionsInWindow,
+  deliverGoalCheckIn,
+  evaluateGoalCheckIn,
+  GOAL_CHECKIN_MIN_GAP_MS,
   isExcludedSite,
   isQuietTime,
   interactionDisposition,
   interactionID,
+  isGoalPlaybackActive,
   isUnidentifiedYouTubeURL,
   normalizeHostname,
   normalizeSettings,
+  playbackStreamKey,
   ProviderProtocolError,
   restartAction,
   summarizeViewing,
@@ -34,6 +39,7 @@ const SETTINGS_KEY = "watchwiseSettings";
 const API_KEY = "geminiApiKey";
 const ONBOARDING_KEY = "onboardingComplete";
 const NUDGE_STATE_KEY = "nudgeState";
+const GOAL_CHECK_STATE_KEY = "goalCheckInState";
 const ANALYSIS_SOURCES_KEY = "analysisSources";
 const ANALYSIS_ALARM = "watchwise-analysis-poll";
 const INSIGHTS_ALARM = "watchwise-insights-refresh";
@@ -41,7 +47,7 @@ const PRUNE_ALARM = "watchwise-prune";
 const SESSION_GAP_MS = 10 * 60_000;
 const RETENTION_MS = 180 * 24 * 60 * 60_000;
 const DASHBOARD_UPDATE_INTERVAL_MS = 1_000;
-const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.6";
+const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.7";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 const repository = new IndexedDBRepository();
 const sessions = new Map();
@@ -157,7 +163,17 @@ function eligibleHTTPSContentTab(tab) {
 async function probeContentScript(tabID) {
   try {
     const response = await chrome.tabs.sendMessage(tabID, { type: "CONTENT_HEALTH_PROBE" }, { frameId: 0 });
-    return response?.ok === true && response.lifecycle === CONTENT_LIFECYCLE;
+    return {
+      live: response?.ok === true && response.lifecycle === CONTENT_LIFECYCLE,
+      trackingEnabled: response?.trackingEnabled === true
+    };
+  } catch { return { live: false, trackingEnabled: false }; }
+}
+
+async function refreshContentScriptState(tabID) {
+  try {
+    const response = await chrome.tabs.sendMessage(tabID, { type: "REFRESH_TRACKING_STATE" });
+    return response?.ok === true;
   } catch { return false; }
 }
 
@@ -188,7 +204,13 @@ async function recoverContentScriptInTab(tab, settings) {
   try { site = normalizeHostname(new URL(tab.url).hostname); }
   catch { return false; }
   if (isExcludedSite(site, settings)) return false;
-  if (await probeContentScript(tab.id)) return true;
+  const health = await probeContentScript(tab.id);
+  if (health.live && health.trackingEnabled) return true;
+  if (health.live) {
+    await refreshContentScriptState(tab.id);
+    const refreshed = await probeContentScript(tab.id);
+    return refreshed.live && refreshed.trackingEnabled;
+  }
   return injectContentScript(tab);
 }
 
@@ -212,9 +234,18 @@ async function activeTabTrackingConnection(tab, settings) {
   try { site = normalizeHostname(new URL(tab.url).hostname); }
   catch { return { status: "not_applicable", reason: "unsupported" }; }
   if (isExcludedSite(site, settings)) return { status: "not_applicable", reason: "excluded" };
-  if (await probeContentScript(tab.id)) return { status: "connected", reason: null };
+  const health = await probeContentScript(tab.id);
+  if (health.live && health.trackingEnabled) return { status: "connected", reason: null };
+  if (health.live) {
+    await refreshContentScriptState(tab.id);
+    const refreshed = await probeContentScript(tab.id);
+    return refreshed.live && refreshed.trackingEnabled
+      ? { status: "connected", reason: null }
+      : { status: "reconnecting", reason: "health_pending" };
+  }
   if (!(await recoverContentScriptInTab(tab, settings))) return { status: "reload_required", reason: "injection_failed" };
-  return await probeContentScript(tab.id)
+  const recovered = await probeContentScript(tab.id);
+  return recovered.live && recovered.trackingEnabled
     ? { status: "connected", reason: null }
     : { status: "reconnecting", reason: "health_pending" };
 }
@@ -350,7 +381,10 @@ async function ingestPlayback(rawInput, sender) {
   if (["playing", "heartbeat"].includes(event.state) && event.isVisible && event.isTabActive) {
     try { await maybeStartAutomaticAnalysis(event, generation); } catch {}
   }
-  if (["playing", "heartbeat"].includes(event.state)) await maybeNudge(event, settings);
+  if (["playing", "heartbeat"].includes(event.state)) {
+    const deliveredGoalCheckIn = await maybeGoalCheckIn(event, generation);
+    if (!deliveredGoalCheckIn) await maybeNudge(event, generation);
+  }
   return { accepted: true };
 }
 
@@ -363,55 +397,128 @@ async function findAnalysisEvidence(event) {
   return result ? aiEvidenceFromResult(result, event.positionSeconds) : null;
 }
 
-function interventionsAllowed(settings, nowMs, pageSite = null) {
-  return settings.notificationsEnabled === true
+function interventionsAllowed(settings, nowMs, pageSite = null, frameSite = null) {
+  return settings.trackingEnabled === true
+    && settings.notificationsEnabled === true
     && !(settings.movieModeUntilMs > nowMs)
     && !(settings.snoozedUntilMs > nowMs)
     && !isQuietTime(nowMs, settings)
-    && (!pageSite || !isExcludedSite(pageSite, settings));
+    && (!pageSite || !isExcludedSite(pageSite, settings))
+    && (!frameSite || !isExcludedSite(frameSite, settings));
 }
 
-async function maybeNudge(event, settings) {
+async function maybeGoalCheckIn(event, generation = historyGeneration) {
+  let reservation = null;
+  await withDataMutation(async () => {
+    if (generation !== historyGeneration) return;
+    const settings = await getSettings();
+    const revision = settingsRevision;
+    const [events, stored] = await Promise.all([
+      repository.listEvents(event.occurredAtMs - 20 * 60_000, event.occurredAtMs + 1),
+      localGet([GOAL_CHECK_STATE_KEY, NUDGE_STATE_KEY])
+    ]);
+    if (generation !== historyGeneration || revision !== settingsRevision) return;
+    const decision = evaluateGoalCheckIn({
+      events,
+      event,
+      settings,
+      state: stored[GOAL_CHECK_STATE_KEY] || {},
+      nowMs: Date.now(),
+      lastInterventionAtMs: stored[NUDGE_STATE_KEY]?.emittedAtMs?.at?.(-1) ?? null
+    });
+    await localSet({ [GOAL_CHECK_STATE_KEY]: decision.state });
+    if (decision.shouldPrompt && generation === historyGeneration && revision === settingsRevision) {
+      reservation = { generation, revision, identity: decision.identity };
+    }
+  });
+  if (!reservation) return false;
+
+  const stillAllowed = async () => {
+    const currentSettings = await getSettings();
+    const nowMs = Date.now();
+    const recentEvents = await repository.listEvents(event.occurredAtMs, nowMs + 1);
+    return reservation.generation === historyGeneration
+      && reservation.revision === settingsRevision
+      && currentSettings.trackingEnabled
+      && interventionsAllowed(currentSettings, nowMs, event.pageSite, event.frameSite)
+      && isGoalPlaybackActive(recentEvents, event, nowMs);
+  };
+  return deliverGoalCheckIn({ browser: chrome, event, isAllowed: stillAllowed });
+}
+
+async function maybeNudge(event, generation = historyGeneration) {
+  if (generation !== historyGeneration) return;
   const nowMs = Date.now();
   const todayRange = dayWindow(nowMs);
   const events = await repository.listEvents(Math.min(todayRange.startMs, nowMs - 20 * 60_000), nowMs + 1);
   const today = summarizeViewing(events, todayRange, { nowMs });
-  const stored = await localGet(NUDGE_STATE_KEY);
-  const engine = new NudgeEngine(stored[NUDGE_STATE_KEY] || {});
-  const decision = engine.evaluate({
-    nowMs,
-    pageSite: event.pageSite,
-    dailyActiveSeconds: today.activeSeconds,
-    activeSessionSeconds: activeSessionSeconds(events, nowMs) || 0,
-    distinctSessionsLast20Minutes: distinctSessionsInWindow(events, nowMs),
-    playbackRate: event.playbackRate,
-    positionSeconds: event.positionSeconds,
-    aiEvidence: await findAnalysisEvidence(event)
-  }, settings);
-  await localSet({ [NUDGE_STATE_KEY]: engine.exportState() });
-  if (!decision.nudge) return;
-  const currentSettings = await getSettings();
-  if (!interventionsAllowed(currentSettings, Date.now(), event.pageSite)) return;
-  const revision = settingsRevision;
-  const nudge = decision.nudge;
-  await chrome.tabs.sendMessage(event.tabID, {
-    type: "SHOW_TOAST",
-    text: `${nudge.title} ${nudge.message}`,
-    actionLabel: Number.isFinite(nudge.suggestedTimestampSeconds) ? "Skip there" : "Open Watchwise",
-    action: Number.isFinite(nudge.suggestedTimestampSeconds)
-      ? { type: "seek", playerId: event.playerID, seconds: nudge.suggestedTimestampSeconds }
-      : { type: "open_panel" }
-  }, { frameId: event.frameID }).catch(() => {});
-  if (revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now(), event.pageSite)) return;
-  const notificationID = `nudge:${event.eventID}`;
-  await chrome.notifications.create(notificationID, {
-    type: "basic",
-    iconUrl: chrome.runtime.getURL("assets/icon128.png"),
-    title: nudge.title.slice(0, 80),
-    message: nudge.message.slice(0, 180),
-    priority: 0
+  const streamKey = playbackStreamKey(event);
+  const streamEvents = events.filter((item) => playbackStreamKey(item) === streamKey);
+  const aiEvidence = await findAnalysisEvidence(event);
+  let decision = null;
+  let revision = settingsRevision;
+  await withDataMutation(async () => {
+    if (generation !== historyGeneration) return;
+    const currentSettings = await getSettings();
+    const currentRevision = settingsRevision;
+    if (!interventionsAllowed(currentSettings, Date.now(), event.pageSite, event.frameSite)) return;
+    const stored = await localGet([NUDGE_STATE_KEY, GOAL_CHECK_STATE_KEY]);
+    if (generation !== historyGeneration || currentRevision !== settingsRevision) return;
+    const goalLast = stored[GOAL_CHECK_STATE_KEY]?.lastInterventionAtMs;
+    if (Number.isFinite(goalLast) && nowMs - goalLast < GOAL_CHECKIN_MIN_GAP_MS) return;
+    const engine = new NudgeEngine(stored[NUDGE_STATE_KEY] || {});
+    const evaluated = engine.evaluate({
+      nowMs,
+      pageSite: event.pageSite,
+      dailyActiveSeconds: today.activeSeconds,
+      activeSessionSeconds: activeSessionSeconds(streamEvents, nowMs) || 0,
+      distinctSessionsLast20Minutes: distinctSessionsInWindow(events, nowMs),
+      playbackRate: event.playbackRate,
+      positionSeconds: event.positionSeconds,
+      aiEvidence
+    }, currentSettings);
+    await localSet({ [NUDGE_STATE_KEY]: engine.exportState() });
+    if (evaluated.nudge) {
+      decision = evaluated;
+      revision = currentRevision;
+    }
   });
-  if (revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now(), event.pageSite)) await chrome.notifications.clear(notificationID);
+  if (!decision?.nudge) return;
+  const currentSettings = await getSettings();
+  if (generation !== historyGeneration || revision !== settingsRevision || !interventionsAllowed(currentSettings, Date.now(), event.pageSite, event.frameSite)) return;
+  const nudge = decision.nudge;
+  let toastDelivered = false;
+  try {
+    await chrome.tabs.sendMessage(event.tabID, {
+      type: "SHOW_TOAST",
+      text: `${nudge.title} ${nudge.message}`,
+      actionLabel: Number.isFinite(nudge.suggestedTimestampSeconds) ? "Skip there" : "Open Watchwise",
+      action: Number.isFinite(nudge.suggestedTimestampSeconds)
+        ? { type: "seek", playerId: event.playerID, seconds: nudge.suggestedTimestampSeconds }
+        : { type: "open_panel" }
+    }, { frameId: event.frameID });
+    toastDelivered = true;
+  } catch {}
+  if (generation !== historyGeneration || revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now(), event.pageSite, event.frameSite)) {
+    if (toastDelivered) await chrome.tabs.sendMessage(event.tabID, { type: "HIDE_TOAST" }, { frameId: event.frameID }).catch(() => {});
+    return;
+  }
+  const notificationID = `nudge:${event.eventID}`;
+  let notificationDelivered = false;
+  try {
+    await chrome.notifications.create(notificationID, {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("assets/icon128.png"),
+      title: nudge.title.slice(0, 80),
+      message: nudge.message.slice(0, 180),
+      priority: 0
+    });
+    notificationDelivered = true;
+  } catch {}
+  if (generation !== historyGeneration || revision !== settingsRevision || !interventionsAllowed(await getSettings(), Date.now(), event.pageSite, event.frameSite)) {
+    if (notificationDelivered) await chrome.notifications.clear(notificationID).catch(() => {});
+    if (toastDelivered) await chrome.tabs.sendMessage(event.tabID, { type: "HIDE_TOAST" }, { frameId: event.frameID }).catch(() => {});
+  }
 }
 
 async function getDashboardState() {
@@ -805,7 +912,7 @@ async function handlePrivilegedMessage(message) {
       await withDataMutation(async () => {
         sessions.clear();
         await repository.deleteAll();
-        await localSet({ [ANALYSIS_SOURCES_KEY]: {}, [NUDGE_STATE_KEY]: {} });
+        await localSet({ [ANALYSIS_SOURCES_KEY]: {}, [NUDGE_STATE_KEY]: {}, [GOAL_CHECK_STATE_KEY]: {} });
       });
       await announceDashboardUpdated({ immediate: true });
       return { ok: true };

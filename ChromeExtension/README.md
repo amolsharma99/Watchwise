@@ -29,25 +29,26 @@ Chrome local extension storage is access-isolated from content scripts but is no
 5. Review the HTTPS access disclosure and choose whether to enable local tracking.
 6. Optional: enable Gemini analysis and save your Gemini API key in Settings. New visible, active public YouTube videos are then analysed automatically unless you turn automatic analysis off. The manual **Analyse** action remains available.
 
-### Updating the unpacked build to v0.3.6
+### Updating the unpacked build to v0.3.8
 
 1. Open `chrome://extensions`, find Watchwise and click **Reload** on its card.
 2. Close any open Watchwise side panel, then reopen it from the toolbar icon.
-3. Verify the header reads **v0.3.6**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
+3. Verify the header reads **v0.3.8**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
+4. Reload any already-open YouTube or Netflix video tabs once. This clears an older content-script instance that Chrome may have invalidated during an extension reload.
 
-Version 0.3.6 adds privacy-scoped Netflix title extraction from media metadata and exact watch-player title elements, while retaining the v0.3.5 recovery for eligible HTTPS tabs that were already open when the unpacked extension was reloaded or updated. Recovery health-checks and safely reinjects the content tracker without reloading the page; the side-panel pill reports whether the active eligible tab is connected, reconnecting, excluded, unsupported, or needs a one-time tab reload. The v0.3.4 local Chrome AI trial remains unchanged.
+Version 0.3.8 adds a brief goal check-in after 15 seconds of demonstrated visible, active playback, while retaining the v0.3.7 invalidated-context cleanup, v0.3.6 Netflix title extraction and v0.3.5 eligible-tab recovery. Chrome cannot retroactively repair a content script orphaned by an older extension reload, so existing affected video tabs still need the one-time reload above.
 
 Reloading the unpacked extension does not delete its local history. Use **Delete history** in Watchwise only when you intentionally want a clean test.
 
 ### On-device AI quality trial
 
-Version 0.3.4 adds a separate local trial page linked from Watchwise Options. It runs Chrome's Summarizer and Prompt APIs on a bundled, public English auto-generated transcript from a four-minute YouTube video. The trial is user-triggered, does not call Gemini API, and does not save or change Watchwise analysis jobs or settings. It reports `available`, `downloadable`, `downloading`, or `unavailable` for each API before enabling the test buttons. The main Gemini flow is unchanged. Chrome's built-in AI APIs run in extension pages, not the Manifest V3 background service worker.
+Version 0.3.4 added a separate local trial page linked from Watchwise Options. It runs Chrome's Summarizer and Prompt APIs on a bundled, public English auto-generated transcript from a four-minute YouTube video. The trial does not call Gemini API and does not save or change Watchwise analysis jobs or settings. In v0.3.7, the page does not probe Chrome's local models or load the transcript on page load: choose **Check local AI availability** first. It shows the base Prompt API state and, when the base API is runnable, the configured task state. It enables an action only when the matching task is available, downloadable or downloading. A model-capability/adaptation warning means Chrome's on-device model or configured task is unavailable. This local trial is separate from Watchwise tracking and Gemini analysis, and it never falls back to Gemini. Chrome may still write its own native model-capability warning to DevTools after an explicit check even when Watchwise handles the result; that browser message cannot be suppressed by the extension.
 
 ### Safe Gemini live test
 
 No live Gemini request or credential was used while building or testing Watchwise. If you choose to run one controlled request with your own key:
 
-1. Reload the unpacked extension, reopen the side panel and verify **v0.3.6** in the header.
+1. Reload the unpacked extension, reopen the side panel and verify **v0.3.8** in the header.
 2. Turn **Analyse new YouTube videos automatically** off so playback cannot create an extra request.
 3. Turn AI consent on, end Movie Mode, and confirm `youtube.com` is not excluded.
 4. Save your own Gemini API key in Watchwise.
@@ -67,6 +68,8 @@ No Chrome profile is modified by the project scripts, and there is no native hos
 - Titles come from the browser Media Session title, the video element’s title/ARIA label, strict Open Graph/Twitter title metadata, or the document title. On an exact Netflix `/watch/` page, Watchwise may fall back to the exact `[data-uia="video-title"]` or `[data-uia="player-title"]` metadata element; it does not scan surrounding page text. Netflix branding and control characters are removed and titles remain capped at 300 characters. When a canonical Short exposes only generic YouTube labels, the breakdown uses **YouTube Short** and retains its canonical link.
 - Daily and weekly video breakdowns show the sanitized saved title, canonical HTTPS link, site and overlap-safe active watched minutes, sorted by active time. YouTube watch, embed, Shorts, Live and `youtu.be` forms deduplicate by canonical video identity. Generic feeds remain separated by the validated session because current privacy-minimal telemetry cannot reliably prove two generic players are the same media. Simultaneous wall time is split evenly among unique active video identities, so row totals equal the overall active watching time.
 - Movie Mode, snooze and quiet hours silence interventions; local accounting continues while tracking remains enabled.
+- After 15 seconds of plausible positive media progress while the video is visible and its tab/window are active, Watchwise may show the exact check-in: **Hope you’re clear on your goal for watching this video.** Seek jumps, paused/hidden playback, separate tabs and viewing episodes more than 30 seconds apart do not combine toward the threshold. YouTube watch/embed/Shorts/Live forms for the same video deduplicate across frames and player replacements; generic sites use the validated session.
+- The goal check-in is processed at most once per video identity in 24 hours and keeps only the latest 200 processed identities. A 60-second anti-spam gap applies across goal and existing nudges. A distinct video blocked only by that brief gap remains pending while actively playing and may check in after the gap; a video suppressed by tracking/notification settings, Movie Mode, snooze, quiet hours or either frame/page exclusion is marked processed and never backfilled later. There is no background alarm for this feature.
 - With AI consent and a saved key, automatic analysis starts only after a validated public YouTube video accumulates at least three seconds of visible, active playback. It is enabled by default and can be turned off independently of manual analysis.
 - Automatic requests are deduplicated by canonical YouTube video ID using durable IndexedDB jobs/results, so concurrent frames and service-worker restarts do not create repeat paid submissions. Pending remote job IDs resume polling after restarts.
 - Gemini uses stored asynchronous Interactions with the public video followed by the text prompt and a structured JSON response. A narrowly detected background-mode incompatibility gets one synchronous fallback under the same durable job; authentication, quota, invalid-request and other failures are never generically retried.

@@ -1,7 +1,7 @@
 (async () => {
   "use strict";
 
-  const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.6";
+  const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.7";
   const CONTROLLER_KEY = "__watchwiseContentLifecycle";
   const previousController = globalThis[CONTROLLER_KEY];
   if (previousController?.probe) {
@@ -24,12 +24,42 @@
   const MIN_VISIBLE_RATIO = 0.25;
   const MIN_VISIBLE_AREA_PX = 12_000;
   const TOAST_COOLDOWN_MS = 60_000;
+  const REFRESH_RETRY_MS = 1_000;
+  const MAX_REFRESH_RETRIES = 3;
   let trackingEnabled = false;
   let disposed = false;
+  let deactivating = false;
+  let refreshRetryTimer = null;
+  let refreshRetryAttempts = 0;
+  let refreshEpoch = 0;
   const lifecycleAbortController = new AbortController();
   let lastToastAt = 0;
   const players = new WeakMap();
   const trackedVideos = new Set();
+
+  function isExtensionContextInvalidated(error) {
+    const message = String(error?.message || error || "").trim().toLowerCase();
+    let runtimeAvailable = true;
+    try { runtimeAvailable = Boolean(chrome.runtime?.id); } catch { runtimeAvailable = false; }
+    return !runtimeAvailable || /^(?:extension context invalidated|the extension context has been invalidated)\.?$/.test(message);
+  }
+
+  function handleRuntimeFailure(error) {
+    if (isExtensionContextInvalidated(error) && !disposed && !deactivating) deactivateLifecycle(false);
+  }
+
+  function sendRuntimeMessage(message) {
+    if (disposed) return Promise.resolve(null);
+    try {
+      return Promise.resolve(chrome.runtime.sendMessage(message)).catch((error) => {
+        handleRuntimeFailure(error);
+        return null;
+      });
+    } catch (error) {
+      handleRuntimeFailure(error);
+      return Promise.resolve(null);
+    }
+  }
 
   function uuid() {
     return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -127,24 +157,22 @@
       metadata.lastPosition = position;
       metadata.lastRate = playbackRate;
     }
-    try {
-      chrome.runtime.sendMessage({
-        type: "PLAYBACK_EVENT",
-        event: {
-          schemaVersion: 1,
-          playerId: metadata.id,
-          title: mediaTitle(video),
-          url: canonicalURL(),
-          site: location.hostname.toLowerCase(),
-          duration,
-          position,
-          playbackRate,
-          state,
-          occurredAtMilliseconds: now,
-          documentVisible: isVisible
-        }
-      }).catch(() => {});
-    } catch {}
+    void sendRuntimeMessage({
+      type: "PLAYBACK_EVENT",
+      event: {
+        schemaVersion: 1,
+        playerId: metadata.id,
+        title: mediaTitle(video),
+        url: canonicalURL(),
+        site: location.hostname.toLowerCase(),
+        duration,
+        position,
+        playbackRate,
+        state,
+        occurredAtMilliseconds: now,
+        documentVisible: isVisible
+      }
+    });
   }
 
   function terminateIfActive(video, metadata) {
@@ -213,10 +241,11 @@
     trackedVideos.add(video);
   }
 
-  function deactivate(video) {
+  function deactivate(video, preserveFinalInterval = true) {
     const metadata = players.get(video);
     if (!metadata?.active) return;
-    terminateIfActive(video, metadata);
+    if (preserveFinalInterval) terminateIfActive(video, metadata);
+    else metadata.wasReportable = false;
     metadata.active = false;
     metadata.intersecting = false;
     clearInterval(metadata.heartbeat);
@@ -230,8 +259,8 @@
     document.querySelectorAll("video").forEach(activate);
   }
 
-  function stopTracking() {
-    for (const video of [...trackedVideos]) deactivate(video);
+  function stopTracking(preserveFinalInterval = true) {
+    for (const video of [...trackedVideos]) deactivate(video, preserveFinalInterval);
   }
 
   function discoverVideos(root) {
@@ -256,15 +285,20 @@
     if (disposed) return;
     const next = enabled === true;
     if (trackingEnabled === next) return;
-    if (!next) stopTracking();
-    trackingEnabled = next;
-    if (next) startTracking();
+    if (!next) {
+      trackingEnabled = false;
+      stopTracking(false);
+      return;
+    }
+    trackingEnabled = true;
+    startTracking();
   }
 
   function showToast(message) {
-    if (disposed) return;
+    if (disposed) return false;
     const now = Date.now();
-    if (now - lastToastAt < TOAST_COOLDOWN_MS || typeof message.text !== "string") return;
+    const isGoalCheckIn = message.priority === "goal_checkin";
+    if ((!isGoalCheckIn && now - lastToastAt < TOAST_COOLDOWN_MS) || typeof message.text !== "string") return false;
     lastToastAt = now;
     document.querySelector("#watchwise-toast-host")?.remove();
     const host = document.createElement("div");
@@ -293,7 +327,7 @@
       action.className = "primary";
       action.textContent = String(message.actionLabel).slice(0, 40);
       action.addEventListener("click", () => {
-        chrome.runtime.sendMessage({ type: "TOAST_ACTION", action: message.action }).catch(() => {});
+        void sendRuntimeMessage({ type: "TOAST_ACTION", action: message.action });
         host.remove();
       });
       actions.append(action);
@@ -307,26 +341,37 @@
     shadow.append(style, toast);
     document.documentElement.append(host);
     setTimeout(() => host.remove(), 15_000);
+    return true;
+  }
+
+  function safeRespond(sendResponse, payload) {
+    try { sendResponse(payload); } catch {}
   }
 
   function handleRuntimeMessage(message, _sender, sendResponse) {
     if (disposed) return false;
     if (message?.type === "TRACKING_STATE") {
+      refreshEpoch += 1;
+      if (refreshRetryTimer !== null) clearTimeout(refreshRetryTimer);
+      refreshRetryTimer = null;
+      refreshRetryAttempts = 0;
       setTrackingState(message.enabled);
-      sendResponse({ ok: true });
+      safeRespond(sendResponse, { ok: true });
     } else if (message?.type === "REFRESH_TRACKING_STATE") {
-      refreshTrackingState();
-      sendResponse({ ok: true });
+      void refreshTrackingState().then(
+        (ok) => safeRespond(sendResponse, { ok }),
+        () => safeRespond(sendResponse, { ok: false })
+      );
+      return true;
     } else if (message?.type === "SHOW_TOAST") {
-      showToast(message);
-      sendResponse({ ok: true });
+      safeRespond(sendResponse, { ok: true, shown: showToast(message) });
     } else if (message?.type === "HIDE_TOAST") {
       document.querySelector("#watchwise-toast-host")?.remove();
-      sendResponse({ ok: true });
+      safeRespond(sendResponse, { ok: true });
     } else if (message?.type === "SEEK_PLAYER") {
-      sendResponse({ ok: seekPlayer(message.playerId, Number(message.seconds)) });
+      safeRespond(sendResponse, { ok: seekPlayer(message.playerId, Number(message.seconds)) });
     } else if (message?.type === "CONTENT_HEALTH_PROBE") {
-      sendResponse({ ok: true, lifecycle: CONTENT_LIFECYCLE });
+      safeRespond(sendResponse, { ok: true, lifecycle: CONTENT_LIFECYCLE, trackingEnabled });
     }
     return false;
   }
@@ -351,33 +396,67 @@
     }
   }
   document.addEventListener("visibilitychange", handleVisibilityChange, { signal: lifecycleAbortController.signal });
-  function refreshTrackingState() {
+  function refreshTrackingState(isRetry = false) {
     if (disposed) return Promise.resolve(false);
-    return chrome.runtime.sendMessage({ type: "CONTENT_READY", url: canonicalURL() })
-      .then((response) => setTrackingState(response?.enabled === true))
-      .catch(() => setTrackingState(false));
+    if (!isRetry) {
+      if (refreshRetryTimer !== null) clearTimeout(refreshRetryTimer);
+      refreshRetryTimer = null;
+      refreshRetryAttempts = 0;
+    }
+    const requestEpoch = ++refreshEpoch;
+    return sendRuntimeMessage({ type: "CONTENT_READY", url: canonicalURL() }).then((response) => {
+      if (disposed || requestEpoch !== refreshEpoch) return false;
+      if (response?.ok !== true) {
+        setTrackingState(false);
+        if (!disposed && refreshRetryTimer === null && refreshRetryAttempts < MAX_REFRESH_RETRIES) {
+          const delay = REFRESH_RETRY_MS * (2 ** refreshRetryAttempts);
+          refreshRetryAttempts += 1;
+          refreshRetryTimer = setTimeout(() => {
+            refreshRetryTimer = null;
+            if (!disposed) void refreshTrackingState(true);
+          }, delay);
+        }
+        return false;
+      }
+      if (refreshRetryTimer !== null) clearTimeout(refreshRetryTimer);
+      refreshRetryTimer = null;
+      refreshRetryAttempts = 0;
+      setTrackingState(response.enabled === true);
+      return true;
+    });
   }
 
   async function probe() {
     if (disposed) return false;
     try {
-      const response = await chrome.runtime.sendMessage({ type: "CONTENT_HEALTH_CHECK", lifecycle: CONTENT_LIFECYCLE });
+      const response = await sendRuntimeMessage({ type: "CONTENT_HEALTH_CHECK", lifecycle: CONTENT_LIFECYCLE });
       return response?.ok === true && response.lifecycle === CONTENT_LIFECYCLE;
     } catch { return false; }
   }
 
-  function deactivateLifecycle() {
-    if (disposed) return;
-    // Preserve the final active interval when the old context is still valid.
-    // Invalidated runtime calls are caught in emit, so cleanup still completes.
-    try { stopTracking(); } catch {}
+  function deactivateLifecycle(preserveFinalInterval = true) {
+    if (disposed || deactivating) return;
+    deactivating = true;
+    // A graceful version replacement preserves the final active interval. An
+    // invalidated runtime cannot deliver it, so mark disposed first and clear
+    // resources without recursively attempting another send.
+    if (!preserveFinalInterval) {
+      trackingEnabled = false;
+      disposed = true;
+    }
+    try { stopTracking(preserveFinalInterval); } catch {}
     trackingEnabled = false;
     disposed = true;
+    refreshEpoch += 1;
     try { lifecycleAbortController.abort(); } catch {}
     try { intersectionObserver.disconnect(); } catch {}
     try { mutationObserver.disconnect(); } catch {}
+    if (refreshRetryTimer !== null) clearTimeout(refreshRetryTimer);
+    refreshRetryTimer = null;
+    refreshRetryAttempts = 0;
     try { chrome.runtime.onMessage.removeListener?.(handleRuntimeMessage); } catch {}
     try { document.querySelector("#watchwise-toast-host")?.remove(); } catch {}
+    deactivating = false;
   }
 
   const controller = Object.freeze({
@@ -385,7 +464,8 @@
     probe,
     refresh: refreshTrackingState,
     deactivate: deactivateLifecycle,
-    isDisposed: () => disposed
+    isDisposed: () => disposed,
+    isTrackingEnabled: () => trackingEnabled
   });
   if (globalThis[CONTROLLER_KEY] !== startupClaim) {
     deactivateLifecycle();

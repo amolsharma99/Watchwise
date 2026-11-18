@@ -1,30 +1,81 @@
 const $ = (selector) => document.querySelector(selector);
 const summarizerOptions = { type: "key-points", format: "plain-text", length: "medium", expectedInputLanguages: ["en"], outputLanguage: "en" };
 const promptOptions = { expectedInputs: [{ type: "text", languages: ["en"] }], expectedOutputs: [{ type: "text", languages: ["en"] }] };
-const source = await fetch(chrome.runtime.getURL("nano-sample.txt")).then((response) => {
-  if (!response.ok) throw new Error("Sample transcript missing");
-  return response.text();
-});
+let transcriptPromise = null;
+$("#summarize").disabled = true;
+$("#assess").disabled = true;
 
-async function checkAvailability(apiName, options, statusSelector, buttonSelector) {
-  const status = $(statusSelector);
-  if (!(apiName in self)) {
-    status.textContent = `${apiName} is unavailable in this extension.`;
-    return;
-  }
+function loadTranscript() {
+  transcriptPromise ||= fetch(chrome.runtime.getURL("nano-sample.txt")).then((response) => {
+    if (!response.ok) throw new Error("Sample transcript missing");
+    return response.text();
+  });
+  return transcriptPromise;
+}
+
+const runnableAvailability = new Set(["available", "downloadable", "downloading"]);
+let summarizerReady = false;
+let promptReady = false;
+
+function localAIUnavailable(status) {
+  status.textContent = "Chrome local AI is unavailable on this device/configuration. This local trial is separate from Watchwise tracking and Gemini analysis.";
+}
+
+function isCapabilityUnavailable(error) {
+  const name = String(error?.name || "");
+  const message = String(error?.message || "").toLowerCase();
+  return name === "NotAllowedError" || /model (?:capability|adaptation).*(?:not available|unavailable)/.test(message);
+}
+
+function setAvailability(status, label, availability) {
+  status.textContent = `${label}: ${availability}`;
+  return runnableAvailability.has(availability);
+}
+
+async function checkSummarizerAvailability() {
+  const status = $("#summarizerStatus");
+  summarizerReady = false;
+  $("#summarize").disabled = true;
+  if (!("Summarizer" in self)) { localAIUnavailable(status); return; }
   try {
-    const availability = await self[apiName].availability(options);
-    status.textContent = `${apiName}: ${availability}`;
-    $(buttonSelector).disabled = availability === "unavailable";
+    summarizerReady = setAvailability(status, "Summarizer", await Summarizer.availability(summarizerOptions));
+    $("#summarize").disabled = !summarizerReady;
   } catch (error) {
-    status.textContent = `${apiName} check failed: ${error.name}: ${error.message}`;
+    if (isCapabilityUnavailable(error)) localAIUnavailable(status);
+    else status.textContent = `Summarizer availability check failed (${String(error?.name || "Error")}).`;
   }
 }
 
-await Promise.all([
-  checkAvailability("Summarizer", summarizerOptions, "#summarizerStatus", "#summarize"),
-  checkAvailability("LanguageModel", promptOptions, "#promptStatus", "#assess")
-]);
+async function checkPromptAvailability() {
+  const status = $("#promptStatus");
+  promptReady = false;
+  $("#assess").disabled = true;
+  if (!("LanguageModel" in self)) { localAIUnavailable(status); return; }
+  try {
+    const base = await LanguageModel.availability();
+    if (!runnableAvailability.has(base)) {
+      status.textContent = `Prompt API: base ${base}; configured task not checked`;
+      return;
+    }
+    const configured = await LanguageModel.availability(promptOptions);
+    status.textContent = `Prompt API: base ${base}; configured task ${configured}`;
+    promptReady = runnableAvailability.has(configured);
+    $("#assess").disabled = !promptReady;
+  } catch (error) {
+    if (isCapabilityUnavailable(error)) localAIUnavailable(status);
+    else status.textContent = `Prompt API availability check failed (${String(error?.name || "Error")}).`;
+  }
+}
+
+$("#checkAvailability").addEventListener("click", async () => {
+  const button = $("#checkAvailability");
+  button.disabled = true;
+  try {
+    await Promise.all([checkSummarizerAvailability(), checkPromptAvailability()]);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $("#summarize").addEventListener("click", async () => {
   const button = $("#summarize");
@@ -33,6 +84,10 @@ $("#summarize").addEventListener("click", async () => {
   $("#summaryOutput").textContent = "";
   let summarizer;
   try {
+    const availability = await Summarizer.availability(summarizerOptions);
+    summarizerReady = runnableAvailability.has(availability);
+    if (!summarizerReady) { localAIUnavailable(status); return; }
+    const source = await loadTranscript();
     status.textContent = "Preparing the local summarizer…";
     summarizer = await Summarizer.create({
       ...summarizerOptions,
@@ -42,10 +97,13 @@ $("#summarize").addEventListener("click", async () => {
     $("#summaryOutput").textContent = await summarizer.summarize(source);
     status.textContent = "Local summary complete.";
   } catch (error) {
-    status.textContent = `Local summary failed: ${error.name}: ${error.message}`;
+    if (isCapabilityUnavailable(error)) {
+      summarizerReady = false;
+      localAIUnavailable(status);
+    } else status.textContent = `Local summary could not run (${String(error?.name || "Error")}).`;
   } finally {
-    summarizer?.destroy();
-    button.disabled = false;
+    try { summarizer?.destroy(); } catch {}
+    button.disabled = !summarizerReady;
   }
 });
 
@@ -56,6 +114,10 @@ $("#assess").addEventListener("click", async () => {
   $("#assessmentOutput").textContent = "";
   let session;
   try {
+    const availability = await LanguageModel.availability(promptOptions);
+    promptReady = runnableAvailability.has(availability);
+    if (!promptReady) { localAIUnavailable(status); return; }
+    const source = await loadTranscript();
     status.textContent = "Preparing the local language model…";
     session = await LanguageModel.create({
       ...promptOptions,
@@ -66,9 +128,12 @@ $("#assess").addEventListener("click", async () => {
     $("#assessmentOutput").textContent = await session.prompt(prompt);
     status.textContent = "Local assessment complete.";
   } catch (error) {
-    status.textContent = `Local assessment failed: ${error.name}: ${error.message}`;
+    if (isCapabilityUnavailable(error)) {
+      promptReady = false;
+      localAIUnavailable(status);
+    } else status.textContent = `Local assessment could not run (${String(error?.name || "Error")}).`;
   } finally {
-    session?.destroy();
-    button.disabled = false;
+    try { session?.destroy(); } catch {}
+    button.disabled = !promptReady;
   }
 });
