@@ -23,12 +23,12 @@ The first Store installation will have a different Chrome extension ID and a cle
 - [x] Finalize and test the AI-free v0.4.0 Store edition; manager and security reviewer approved ZIP SHA-256 `fd43dbc309170f7dee0c9b9b4fedc0221465752897df6c5a3f526c6c3e6a2044`.
 - [x] Encrypt local viewing records at rest and verify insights, export, pruning, deletion, and secure reset in real Chrome.
 - [x] Align its privacy policy, guide, listing, and screenshots with the packaged UI.
-- [ ] Publish the matching privacy-policy URL and documentation in the public GitHub repository.
+- [x] Publish the matching privacy-policy URL and illustrated user guide in the public GitHub repository (docs-only commit `abc142b`; source release commit remains local).
 - [ ] Test the final packaged build in Chrome, including install/update, a fresh video, start/time count, goal toast, Movie Mode, export, and deletion.
-- [ ] Complete developer registration and 2-Step Verification in the owner's Google account, if needed.
+- [x] Owner reports the Developer Dashboard is signed in and the registration fee is paid; Google may still request any account checks during submission.
 - [ ] Upload the final ZIP and screenshots; complete Store Listing, Privacy, Distribution, and reviewer test instructions.
 - [ ] Submit for review with Public visibility if the owner chooses to release. Record the item ID and listing URL after submission/approval.
 
 ## Account and dashboard handoff
 
-The [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/) currently requires the owner's Google re-verification. The available browser automation surface reports that the extensions gallery cannot be scripted, so the account registration and final dashboard submission must be completed by the owner in Chrome. Do not share a password, verification code, or API key. The release ZIP, text fields, screenshots, and privacy URL are prepared locally for copy/upload.
+The owner reports the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole/) is signed in and its registration fee is paid. The available browser automation surface could not control the extensions gallery, so the final dashboard upload and submission must be completed by the owner in Chrome. Do not share a password, verification code, or API key. The release ZIP, text fields, screenshots, and verified public privacy URL are prepared for copy/upload.
