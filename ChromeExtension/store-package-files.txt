@@ -12,6 +12,7 @@ lib/nudges.js
 lib/settings.js
 lib/storage.js
 lib/validation.js
+lib/youtube.js
 sidepanel.html
 sidepanel.css
 sidepanel.js

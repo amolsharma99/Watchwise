@@ -13,6 +13,13 @@
   </header>
 
   <main>
+    <section id="storageRecovery" class="card storage-recovery" hidden>
+      <p class="eyebrow">Local storage recovery</p>
+      <h1>Watchwise can’t open its encrypted local data.</h1>
+      <p>The encryption key or stored records are unavailable or damaged. Watchwise has stopped local tracking to protect your privacy.</p>
+      <p><strong>Resetting permanently deletes all Watchwise viewing history and settings in this Chrome profile.</strong> It creates a fresh encrypted store with tracking off.</p>
+      <button id="resetSecureStorage" class="button danger">Reset local Watchwise data</button>
+    </section>
     <section id="onboarding" class="card onboarding" hidden>
       <p class="eyebrow">Private by default</p>
       <h1>Understand your viewing without recording your screen.</h1>
@@ -21,6 +28,7 @@
         <li>No pixels, audio, captions, arbitrary page-body text or cookies</li>
         <li>Titles come only from media attributes, Media Session, page title metadata and, on Netflix /watch/ pages, exact player-title metadata</li>
         <li>History stays in this browser’s IndexedDB</li>
+        <li>Local records are AES-256-GCM encrypted before storage; the non-exportable key stays in this Chrome profile</li>
       </ul>
       <label class="check"><input id="onboardTracking" type="checkbox"><span>Enable local video tracking</span></label>
       <button id="finishOnboarding" class="button primary">Continue</button>
@@ -73,7 +81,7 @@
           <div id="exclusions" class="chips"></div>
         </section>
         <section class="card settings-group danger-zone">
-          <div><h2>Your data</h2><p class="small">Export local viewing history and safe settings, or permanently delete local history.</p></div>
+          <div><h2>Your data</h2><p class="small">Local records are encrypted. Export creates plaintext JSON; store that file safely. You can also permanently delete local history.</p></div>
           <div class="button-row"><button id="exportData" class="button subtle">Export JSON</button><button id="deleteData" class="button danger">Delete history</button></div>
         </section>
       </section>

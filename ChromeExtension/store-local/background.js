@@ -1,4 +1,4 @@
-import { IndexedDBRepository } from "./lib/storage.js";
+import { IndexedDBRepository, isSecureStorageError } from "./lib/storage.js";
 import { NudgeEngine, distinctSessionsInWindow } from "./lib/nudges.js";
 import { activeSessionSeconds, dayWindow, summarizeViewing, weekWindow } from "./lib/insights.js";
 import {
@@ -24,14 +24,12 @@ const DASHBOARD_UPDATE_INTERVAL_MS = 1_000;
 const CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.9";
 const repository = new IndexedDBRepository();
 const sessions = new Map();
-let storageReadyPromise;
 let historyGeneration = 0;
 let dataMutationQueue = Promise.resolve();
 let settingsRevision = 0;
 let dashboardUpdateTimer = null;
 let lastDashboardUpdateAtMs = 0;
 let contentRecoveryPromise = null;
-let lastPruneAtMs = 0;
 
 function withDataMutation(operation) {
   const run = dataMutationQueue.then(operation, operation);
@@ -39,15 +37,27 @@ function withDataMutation(operation) {
   return run;
 }
 
-function protectLocalStorage() {
-  if (!storageReadyPromise) {
-    storageReadyPromise = chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
-  }
-  return storageReadyPromise;
+const STATE_FIELDS = Object.freeze({
+  [SETTINGS_KEY]: "settings",
+  [ONBOARDING_KEY]: "onboardingComplete",
+  [NUDGE_STATE_KEY]: "nudgeState",
+  [GOAL_CHECK_STATE_KEY]: "goalCheckInState"
+});
+async function localGet(keys) {
+  const state = await repository.getState();
+  const requested = Array.isArray(keys) ? keys : [keys];
+  return Object.fromEntries(requested.map((key) => [key, state[STATE_FIELDS[key]]]));
 }
-
-async function localGet(keys) { await protectLocalStorage(); return chrome.storage.local.get(keys); }
-async function localSet(values) { await protectLocalStorage(); return chrome.storage.local.set(values); }
+async function localSet(values) {
+  const current = await repository.getState();
+  const next = { ...current };
+  for (const [key, value] of Object.entries(values)) {
+    const field = STATE_FIELDS[key];
+    if (!field) throw new TypeError("unknown secure state field");
+    next[field] = value;
+  }
+  await repository.setState(next);
+}
 function isExtensionPage(sender) {
   return sender?.id === chrome.runtime.id && typeof sender.url === "string" && sender.url.startsWith(chrome.runtime.getURL(""));
 }
@@ -86,21 +96,32 @@ async function saveSettings(patch) {
   return settings;
 }
 
+async function completeOnboarding(trackingEnabled) {
+  let settings;
+  await withDataMutation(async () => {
+    const state = await repository.getState();
+    settings = normalizeSettings({ ...state.settings, trackingEnabled: trackingEnabled === true });
+    settingsRevision += 1;
+    await repository.setState({ ...state, settings, onboardingComplete: true });
+  });
+  await broadcastTrackingState();
+  if (settings.trackingEnabled) void recoverExistingContentScripts(settings);
+  return settings;
+}
+
 async function setInitialState() {
-  await protectLocalStorage();
-  const stored = await chrome.storage.local.get([SETTINGS_KEY, ONBOARDING_KEY]);
-  await chrome.storage.local.set({ [SETTINGS_KEY]: normalizeSettings(stored[SETTINGS_KEY]) });
-  if (typeof stored[ONBOARDING_KEY] !== "boolean") await chrome.storage.local.set({ [ONBOARDING_KEY]: false });
   await repository.open();
-  await maybePrune(Date.now());
+  const state = await repository.getState();
+  await repository.setState({ ...state, settings: normalizeSettings(state.settings), onboardingComplete: state.onboardingComplete === true });
+  try { await maybePrune(Date.now()); } catch {}
 }
 
 async function maybePrune(nowMs = Date.now()) {
-  if (nowMs - lastPruneAtMs < PRUNE_INTERVAL_MS) return;
   await withDataMutation(async () => {
-    if (nowMs - lastPruneAtMs < PRUNE_INTERVAL_MS) return;
+    const state = await repository.getState();
+    if (nowMs - (state.maintenance?.lastPruneAtMs || 0) < PRUNE_INTERVAL_MS) return;
     await repository.prune(nowMs - RETENTION_MS);
-    lastPruneAtMs = nowMs;
+    await repository.setState({ ...state, maintenance: { lastPruneAtMs: nowMs } });
   });
 }
 
@@ -324,7 +345,7 @@ async function ingestPlayback(rawInput, sender) {
   });
   if (!event) return { accepted: false };
   void announceDashboardUpdated();
-  void maybePrune();
+  void maybePrune().catch(() => {});
   if (["playing", "heartbeat"].includes(event.state)) {
     const deliveredGoalCheckIn = await maybeGoalCheckIn(event, generation);
     if (!deliveredGoalCheckIn) await maybeNudge(event, generation);
@@ -434,10 +455,8 @@ async function maybeNudge(event, generation = historyGeneration) {
     await chrome.tabs.sendMessage(event.tabID, {
       type: "SHOW_TOAST",
       text: `${nudge.title} ${nudge.message}`,
-      actionLabel: Number.isFinite(nudge.suggestedTimestampSeconds) ? "Skip there" : "Open Watchwise",
-      action: Number.isFinite(nudge.suggestedTimestampSeconds)
-        ? { type: "seek", playerId: event.playerID, seconds: nudge.suggestedTimestampSeconds }
-        : { type: "open_panel" }
+      actionLabel: "Open Watchwise",
+      action: { type: "open_panel" }
     }, { frameId: event.frameID });
     toastDelivered = true;
   } catch {}
@@ -470,11 +489,6 @@ async function getDashboardState() {
 }
 
 
-async function seekTimestamp(message) {
-  if (!Number.isInteger(message.tabId) || !Number.isInteger(message.frameId) || typeof message.playerId !== "string" || !Number.isFinite(message.seconds)) throw new TypeError("invalid seek target");
-  return chrome.tabs.sendMessage(message.tabId, { type: "SEEK_PLAYER", playerId: message.playerId, seconds: message.seconds }, { frameId: message.frameId });
-}
-
 async function openPanel() {
   const window = await chrome.windows.getLastFocused();
   if (!window?.id) throw new Error("No Chrome window");
@@ -485,12 +499,10 @@ async function handlePrivilegedMessage(message) {
   switch (message.type) {
     case "GET_DASHBOARD_STATE": return { ok: true, state: await getDashboardState() };
     case "COMPLETE_ONBOARDING": {
-      const settings = await saveSettings({ trackingEnabled: message.trackingEnabled === true });
-      await localSet({ [ONBOARDING_KEY]: true });
+      const settings = await completeOnboarding(message.trackingEnabled);
       return { ok: true, state: { ...(await getDashboardState()), settings } };
     }
     case "UPDATE_SETTINGS": return { ok: true, state: { ...(await getDashboardState()), settings: await saveSettings(message.patch) } };
-    case "SEEK_TIMESTAMP": await seekTimestamp(message); return { ok: true };
     case "DELETE_HISTORY": {
       historyGeneration += 1;
       await withDataMutation(async () => {
@@ -506,11 +518,37 @@ async function handlePrivilegedMessage(message) {
   }
 }
 
-const initializationPromise = setInitialState();
+let initializationPromise = setInitialState();
+
+async function resetSecureStorage() {
+  historyGeneration += 1;
+  settingsRevision += 1;
+  await withDataMutation(async () => {
+    sessions.clear();
+    await repository.resetSecureStorage();
+  });
+  initializationPromise = setInitialState();
+  await initializationPromise;
+  await Promise.allSettled([broadcastTrackingState(), clearInterventions(), announceDashboardUpdated({ immediate: true })]);
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
-    await initializationPromise;
+    if (message?.type === "RESET_SECURE_STORAGE") {
+      if (!isExtensionPage(sender)) throw new TypeError("privileged sender required");
+      await resetSecureStorage();
+      return { ok: true };
+    }
+    try {
+      await initializationPromise;
+    } catch {
+      if (isExtensionPage(sender)) return {
+        ok: false,
+        code: "secure_storage_unavailable",
+        error: "Encrypted local data could not be opened. Reset Watchwise local data to continue."
+      };
+      throw new Error("Secure local storage is unavailable");
+    }
     if (message?.type === "DASHBOARD_UPDATED") return { ok: true };
     if (message?.type === "CONTENT_HEALTH_CHECK") return {
       ok: message.lifecycle === CONTENT_LIFECYCLE,
@@ -524,15 +562,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === "PLAYBACK_EVENT") return { ok: true, ...(await ingestPlayback(message.event, sender)) };
     if (message?.type === "TOAST_ACTION") {
       if (message.action?.type === "open_panel") await openPanel();
-      else if (message.action?.type === "seek") {
-        const context = frameContext(sender);
-        await seekTimestamp({ tabId: context.tabID, frameId: context.frameID, playerId: message.action.playerId, seconds: Number(message.action.seconds) });
-      } else throw new TypeError("invalid toast action");
+      else throw new TypeError("invalid toast action");
       return { ok: true };
     }
     if (!isExtensionPage(sender)) throw new TypeError("privileged sender required");
     return handlePrivilegedMessage(message);
-  })().then(sendResponse).catch((error) => sendResponse({ ok: false, error: publicError(error) }));
+  })().then(sendResponse).catch((error) => sendResponse(isExtensionPage(sender) && isSecureStorageError(error)
+    ? {
+        ok: false,
+        code: "secure_storage_unavailable",
+        error: "Encrypted local data could not be opened. Reset Watchwise local data to continue."
+      }
+    : { ok: false, error: publicError(error) }));
   return true;
 });
 

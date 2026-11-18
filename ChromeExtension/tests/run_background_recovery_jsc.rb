@@ -4,7 +4,8 @@ require "tempfile"
 require "timeout"
 
 root = File.expand_path("..", __dir__)
-background = File.read(File.join(root, "background.js"))
+background_path = ENV["WATCHWISE_BACKGROUND"] || File.join(root, "background.js")
+background = File.read(background_path)
 start = background.index("function eligibleHTTPSContentTab(tab)")
 finish = background.index("function frameContext", start || 0)
 abort "Could not extract background recovery helpers" unless start && finish

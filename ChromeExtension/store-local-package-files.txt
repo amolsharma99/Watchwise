@@ -1,0 +1,21 @@
+# source path | archive path
+store-local/manifest.json|manifest.json
+store-local/background.js|background.js
+store-local/content.js|content.js
+store-local/lib/storage.js|lib/storage.js
+store-local/lib/settings.js|lib/settings.js
+store-local/lib/nudges.js|lib/nudges.js
+lib/validation.js|lib/validation.js
+lib/youtube.js|lib/youtube.js
+lib/insights.js|lib/insights.js
+lib/goal-checkin.js|lib/goal-checkin.js
+store-local/sidepanel.html|sidepanel.html
+store-local/sidepanel.css|sidepanel.css
+store-local/sidepanel.js|sidepanel.js
+store-local/options.html|options.html
+options.css|options.css
+store-local/options.js|options.js
+assets/icon16.png|assets/icon16.png
+assets/icon32.png|assets/icon32.png
+assets/icon48.png|assets/icon48.png
+assets/icon128.png|assets/icon128.png

@@ -6,8 +6,7 @@
   "description": "Private, intentional video-watching insights and local nudges.",
   "permissions": [
     "scripting",
-    "sidePanel",
-    "storage"
+    "sidePanel"
   ],
   "host_permissions": ["https://*/*"],
   "incognito": "not_allowed",

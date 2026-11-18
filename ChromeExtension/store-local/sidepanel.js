@@ -6,11 +6,15 @@ let dashboard = null;
 let breakdownRange = "today";
 let refreshSequence = 0;
 let versionMismatchNotified = false;
-const repository = new IndexedDBRepository();
+let repository = new IndexedDBRepository();
 
 async function send(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!response?.ok) throw new Error(response?.error || "Watchwise could not complete that action.");
+  if (!response?.ok) {
+    const error = new Error(response?.error || "Watchwise could not complete that action.");
+    error.code = response?.code;
+    throw error;
+  }
   return response;
 }
 
@@ -28,14 +32,6 @@ function formatDuration(seconds = 0) {
   const minutes = Math.max(0, Math.round(seconds / 60));
   if (minutes < 60) return `${minutes}m`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
-function formatTimestamp(seconds = 0) {
-  const value = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(value / 3600);
-  const minutes = Math.floor((value % 3600) / 60);
-  const rest = value % 60;
-  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}` : `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
 function minuteToTime(minute) {
@@ -145,6 +141,7 @@ function renderExclusions(sites = []) {
 
 function render(state) {
   dashboard = state;
+  $("#storageRecovery").hidden = true;
   const panelVersion = chrome.runtime.getManifest().version;
   const runtimeVersion = String(state.extensionVersion || panelVersion);
   setText("#buildVersion", `Watch with intent · v${runtimeVersion}`);
@@ -199,7 +196,16 @@ async function refresh() {
     const state = (await send("GET_DASHBOARD_STATE")).state;
     if (sequence === refreshSequence) render(state);
   }
-  catch (error) { if (sequence === refreshSequence) notify(error.message, true); }
+  catch (error) {
+    if (sequence !== refreshSequence) return;
+    if (error.code === "secure_storage_unavailable") {
+      $("#onboarding").hidden = true;
+      $("#app").hidden = true;
+      $("#storageRecovery").hidden = false;
+      return;
+    }
+    notify(error.message, true);
+  }
 }
 
 function invalidateFullStateRequests() {
@@ -229,6 +235,22 @@ $$('[data-video-range]').forEach((button) => button.addEventListener("click", ()
   renderVideoBreakdown();
 }));
 $("#refresh").addEventListener("click", refresh);
+$("#resetSecureStorage").addEventListener("click", async () => {
+  if (!confirm("Permanently delete all local Watchwise history and settings, then create a fresh encrypted store with tracking off?")) return;
+  const button = $("#resetSecureStorage");
+  button.disabled = true;
+  try {
+    await send("RESET_SECURE_STORAGE");
+    repository = new IndexedDBRepository();
+    $("#storageRecovery").hidden = true;
+    notify("Local Watchwise data was reset. Tracking remains off.");
+    await refresh();
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
 $("#finishOnboarding").addEventListener("click", async () => {
   invalidateFullStateRequests();
   try {
@@ -257,6 +279,7 @@ $("#exclusionForm").addEventListener("submit", (event) => {
   if (value) updateSettings({ excludedSites: [...new Set([...(dashboard?.settings?.excludedSites || []), value])] }).then((saved) => { if (saved) $("#excludedSite").value = ""; });
 });
 $("#exportData").addEventListener("click", async () => {
+  if (!confirm("Export decrypted viewing history as plaintext JSON? Store the exported file safely.")) return;
   try {
     await repository.open();
     const data = await repository.exportData(dashboard?.settings ?? {});
@@ -268,9 +291,9 @@ $("#exportData").addEventListener("click", async () => {
       link.download = `watchwise-export-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
     } finally {
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1_000);
     }
-    notify("History exported.");
+    notify("Plaintext JSON exported. Store it safely.");
   } catch (error) {
     notify(error instanceof Error ? error.message : "Watchwise could not export your history.", true);
   }

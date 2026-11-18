@@ -10,9 +10,9 @@ Google requires a registered Chrome Web Store developer account, a one-time regi
 
 The tested v0.3.9 package includes optional Gemini analysis, but Google's [Gemini API Additional Terms](https://aistudio.google.com/docs/terms) introduce unresolved conditions for a public consumer-facing API client: professional/business use, under-18 access, available regions, and paid-service use for end users in the EEA, Switzerland and UK. A user-supplied API key alone does not establish those conditions. **Do not upload the v0.3.9 AI-enabled ZIP as a public item.**
 
-A v0.4.0 local-only Store edition is being prepared with video tracking, insights, in-page nudges, Movie Mode and privacy controls. It will have no Gemini API calls or AI/key controls. The full AI-enabled build remains a separate experimental source build pending policy resolution. The owner will choose whether to publish the local-only edition now or hold the release.
+The owner chose to publish a v0.4.0 local-only Store edition with video tracking, insights, in-page nudges, Movie Mode and privacy controls. It has no Gemini API calls or AI/key controls. The full AI-enabled build remains a separate experimental source build pending policy resolution. The owner confirmed that the older AI-enabled ZIP has not been uploaded to the Chrome Web Store.
 
-The first Store installation will have a different Chrome extension ID and a clean local-only database, so its history will start fresh. Watchwise has Export JSON but no import. Export the unpacked build's history first if those old records matter; then **disable the unpacked extension** before using the Store edition so two copies do not show duplicate nudges. You may leave the disabled unpacked copy installed temporarily to retain its separate history. There is no automatic transfer between them.
+The first Store installation will have a different Chrome extension ID and a clean local-only database, so its history will start fresh. Watchwise has Export JSON but no import. Export the unpacked build's history first if those old records matter, clear its saved Gemini key if you no longer use it, then **disable the unpacked extension** before using the Store edition so two copies do not show duplicate nudges. You may leave the disabled unpacked copy installed temporarily to retain its separate history. There is no automatic transfer between them.
 
 ## Work status
 
@@ -20,8 +20,9 @@ The first Store installation will have a different Chrome extension ID and a cle
 - [x] Produce a privacy policy, user guide and listing draft for the current full build.
 - [x] Render demonstration screenshots from Watchwise's interface with no personal viewing data or key.
 - [x] Run source, integration, security, package, and deterministic ZIP checks on the full v0.3.9 build.
-- [ ] Finalize and test the AI-free v0.4.0 Store edition.
-- [ ] Align its privacy policy, guide, listing, and screenshots with the packaged UI.
+- [x] Finalize and test the AI-free v0.4.0 Store edition; manager and security reviewer approved ZIP SHA-256 `fd43dbc309170f7dee0c9b9b4fedc0221465752897df6c5a3f526c6c3e6a2044`.
+- [x] Encrypt local viewing records at rest and verify insights, export, pruning, deletion, and secure reset in real Chrome.
+- [x] Align its privacy policy, guide, listing, and screenshots with the packaged UI.
 - [ ] Publish the matching privacy-policy URL and documentation in the public GitHub repository.
 - [ ] Test the final packaged build in Chrome, including install/update, a fresh video, start/time count, goal toast, Movie Mode, export, and deletion.
 - [ ] Complete developer registration and 2-Step Verification in the owner's Google account, if needed.

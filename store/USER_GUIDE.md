@@ -9,9 +9,9 @@ Watchwise helps you notice and reduce passive video watching in Chrome. The Stor
 3. Turn on **Track visible videos** to begin local viewing insights. Tracking is off until you choose this.
 4. Turn on **In-page alerts** if you want gentle check-ins. They appear within the video page, not in macOS banners.
 
-If you previously loaded the experimental unpacked Watchwise extension, the Store installation starts with separate, empty local history. Export the unpacked history first if you want a backup, then disable the unpacked copy so you do not see duplicate nudges. There is no import into the Store edition.
+If you previously loaded the experimental unpacked Watchwise extension, the Store installation starts with separate, empty local history. Export the unpacked history first if you want a backup, clear its saved Gemini key if you no longer use it, then disable the unpacked copy so you do not see duplicate nudges. There is no import into the Store edition.
 
-![Demonstration Overview with active watching, starts, and weekly context](../docs/screenshots/01-overview.png)
+![Demonstration Overview with active watching, starts, and weekly context](screenshots/01-overview.png)
 
 ## Overview and video breakdown
 
@@ -19,7 +19,7 @@ If you previously loaded the experimental unpacked Watchwise extension, the Stor
 
 The Overview shows today's time and starts plus weekly context. **Top sites** totals time by website. **Video breakdown** lists saved titles, links, sites, and minutes in descending order; its Today/Week control changes the period. Simultaneous viewing time is shared across active videos so rows add up to the overall total.
 
-![Demonstration Top sites and Video breakdown with synthetic titles and minutes](../docs/screenshots/02-breakdown.png)
+![Demonstration Top sites and Video breakdown with synthetic titles and minutes](screenshots/02-breakdown.png)
 
 Watchwise tracks detectable HTML5 video on HTTPS sites, including supported YouTube watch pages and Shorts, Netflix, and other websites with ordinary players. Some DRM, canvas, custom, or inaccessible embedded players may not work. YouTube homepage autoplay previews without a canonical video ID are excluded. If a site supplies only generic metadata, Watchwise may show a generic title rather than guessing from unrelated page text.
 
@@ -27,22 +27,27 @@ Watchwise tracks detectable HTML5 video on HTTPS sites, including supported YouT
 
 After about 15 seconds of actual, visible playback, Watchwise can show: **“Hope you’re clear on your goal for watching this video.”** A seek jump itself does not count; continued playback after the seek does. The check-in appears at most once per video identity for 24 hours with a short gap between nudges. Other nudges may suggest a pause when Watchwise detects a longer viewing pattern.
 
-![Demonstration of the translucent goal check-in on a synthetic video page](../docs/screenshots/03-goal-checkin.png)
+![Demonstration of the translucent goal check-in on a synthetic video page](screenshots/03-goal-checkin.png)
 
 Use **Movie Mode · 2h**, **Snooze · 30m**, quiet hours, site exclusions, or the In-page alerts switch when you want no interruption. Tracking continues in Movie Mode unless you turn tracking off. The daily viewing target controls longer-session nudges.
 
-![Demonstration of daily target, Movie Mode, snooze, and quiet hours](../docs/screenshots/06-interruption-controls.png)
+![Demonstration of the Store edition Settings tab with tracking and in-page alert switches](screenshots/04-settings.png)
+
+![Demonstration of daily target, Movie Mode, snooze, and quiet hours](screenshots/05-interruption-controls.png)
 
 ## Privacy, export, and deletion
 
-Watchwise saves eligible video metadata and playback events in local Chrome IndexedDB; settings stay in extension local storage. It has no developer-operated server, remote AI calls, or analytics. It does not capture screen pixels, audio, captions, forms, cookies, passwords, or arbitrary page text. The exact title metadata of a Netflix `/watch/` player may be read when ordinary title sources are generic. See the [Store edition privacy policy](PRIVACY.md).
+Watchwise encrypts eligible video metadata, playback events, and settings with AES-256-GCM in local Chrome IndexedDB. Its non-extractable key lives in the same Chrome profile, so this protects stored records at rest but is not a password or a separate-device security boundary. It has no developer-operated server, remote AI calls, or analytics. It does not capture screen pixels, audio, captions, forms, cookies, passwords, or arbitrary page text. The exact title metadata of a Netflix `/watch/` player may be read when ordinary title sources are generic. See the [Store edition privacy policy](PRIVACY.md).
 
-Use **Export JSON** to download local history and safe settings. **Delete history** clears local viewing records. Watchwise also removes playback events after 180 days. Turning tracking off stops new records but does not erase older entries immediately.
+Use **Export JSON** to download local history and safe settings. The downloaded JSON is unencrypted, so keep it private. **Delete history** clears local viewing records. Watchwise also removes playback events after 180 days. Turning tracking off stops new records but does not erase older entries immediately.
+
+![Demonstration of site exclusions and local export/delete controls](screenshots/06-your-data.png)
 
 ## Troubleshooting
 
 - If minutes or starts stay unchanged, keep Chrome frontmost and the video visible; watch for at least a few seconds of actual playback. Check tracking and site exclusions. Reload an already-open video tab after an extension update.
 - If the goal toast does not appear, check In-page alerts, Movie Mode, snooze, quiet hours, and whether the video has played for 15 real seconds after any seek. Some fullscreen players cannot show an extension overlay until you exit fullscreen.
 - If a title is generic, the site may not expose reliable metadata. Watchwise does not infer titles from surrounding page text.
+- If Watchwise says it cannot open encrypted local data, use **Reset local Watchwise data** only after reading the on-screen warning. The reset permanently clears this Store edition's local history and settings, then returns tracking to off. If the data is unreadable, exporting it first may not be possible.
 
 For support, use [Watchwise GitHub issues](https://github.com/amolsharma99/Watchwise/issues) with a public or synthetic example. Do not attach private viewing history.

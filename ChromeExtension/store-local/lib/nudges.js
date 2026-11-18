@@ -31,7 +31,7 @@ export class NudgeEngine {
   }
 
   exportState() { return Object.freeze({ schemaVersion: 1, cooldownMs: this.cooldownMs, hourlyLimit: this.hourlyLimit, emittedAtMs: [...this.emittedAtMs] }); }
-  #nudge(kind, title, message, nowMs) { return Object.freeze({ kind, title, message, createdAtMs: nowMs, suggestedTimestampSeconds: null }); }
+  #nudge(kind, title, message, nowMs) { return Object.freeze({ kind, title, message, createdAtMs: nowMs }); }
   #suppressed(suppression) { return Object.freeze({ nudge: null, suppression }); }
 }
 

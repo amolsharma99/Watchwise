@@ -3,7 +3,7 @@ require "open3"
 require "tmpdir"
 
 root = File.expand_path("..", __dir__)
-sources = %w[validation.js settings.js auto-analysis.js insights.js].map do |name|
+sources = %w[validation.js settings.js youtube.js insights.js].map do |name|
   text = File.read(File.join(root, "lib", name))
   text.gsub(/^import .*?;\n/m, "").gsub(/\bexport\s+/, "")
 end

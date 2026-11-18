@@ -12,11 +12,13 @@ To find a useful title, Watchwise reads video attributes, the browser's Media Se
 
 ## Storage, sharing, and retention
 
-Viewing events are kept in local IndexedDB in your Chrome profile. Settings are kept in Chrome extension local storage. Watchwise does not send viewing history to its developer or a third party, sell data, or use it for ads. It makes no remote analytics or AI requests. Chrome profile/device access may still expose locally stored data.
+Viewing events and settings are encrypted with AES-256-GCM and kept in local IndexedDB in your Chrome profile. The non-extractable encryption key is stored in a separate IndexedDB store in the same Chrome profile. This protects the stored records at rest; it is not a password or a separate-device security boundary, and someone with access to your unlocked Chrome profile may still access the data. Watchwise does not send viewing history to its developer or a third party, sell data, or use it for ads. It makes no remote analytics or AI requests.
 
-Watchwise automatically removes local playback events older than 180 days. You can remove them sooner with **Delete history**, or remove the extension/profile. Turning tracking off stops new collection but does not erase existing history. **Export JSON** downloads a local copy of your history and safe settings when you click it. Movie Mode, snooze, quiet hours, excluded sites, and the In-page alerts switch control interruptions; Watchwise does not send Chrome or macOS system notification banners.
+Watchwise automatically removes local playback events older than 180 days. You can remove them sooner with **Delete history**, or remove the extension/profile. Turning tracking off stops new collection but does not erase existing history. **Export JSON** downloads an unencrypted JSON copy of your history and safe settings when you click it; keep that file private. Movie Mode, snooze, quiet hours, excluded sites, and the In-page alerts switch control interruptions; Watchwise does not send Chrome or macOS system notification banners.
 
-Watchwise requests HTTPS website access to detect videos across sites and embedded frames and show in-page alerts. `storage` keeps local settings, `sidePanel` presents the dashboard, and `scripting` repairs consent-gated tracking in already-open eligible tabs after updates. The [Store edition user guide](USER_GUIDE.md) explains the controls and detection limits.
+If the encryption key or stored data becomes unreadable, Watchwise stops tracking and offers a confirmed **Reset local Watchwise data** action. Reset permanently deletes the Store edition's local history and settings in that Chrome profile and starts again with tracking off. An unreadable database may prevent export before reset.
+
+Watchwise requests HTTPS website access to detect videos across sites and embedded frames and show in-page alerts. `sidePanel` presents the dashboard, and `scripting` repairs consent-gated tracking in already-open eligible tabs after updates. The [Store edition user guide](USER_GUIDE.md) explains the controls and detection limits.
 
 Watchwise handles extension user data according to the Chrome Web Store User Data Policy, including its Limited Use requirements.
 
