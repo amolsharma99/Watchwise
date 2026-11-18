@@ -37,7 +37,7 @@ Watchwise can ask Google's Gemini API for a quick take, key moments, possible sk
 
 To use it, open **Settings**, turn on **Allow Gemini analysis**, and save your own Gemini API key. With both in place, Watchwise automatically starts analysis for a new public YouTube video after meaningful active playback. **Analyse new YouTube videos automatically** is on by default after AI setup; turn it off if you want manual analysis only. In the **Analyse** tab, you can paste a public YouTube URL and choose **Analyse with Gemini**. A request is asynchronous; the result appears in the side panel when ready, and a brief in-page toast can appear in the source tab.
 
-Each new analysis may consume paid Gemini API quota or incur charges on your Google account. A saved key does not guarantee available quota. A private, restricted, unavailable, or unsupported video can fail. If you close the source tab, reopen Watchwise to see the saved result; no macOS banner is sent.
+Each new analysis may consume paid Gemini API quota or incur charges on your Google account. A saved key does not guarantee available quota. Under Google's terms, unpaid API inputs and outputs may be used for product improvement and human review. A private, restricted, unavailable, or unsupported video can fail. If you close the source tab, reopen Watchwise to see the saved result; no macOS banner is sent.
 
 ![Demonstration of the Analyse tab and its optional Gemini controls; no model result is fabricated](docs/screenshots/04-analyse.png)
 

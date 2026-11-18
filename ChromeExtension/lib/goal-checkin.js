@@ -1,4 +1,4 @@
-import { youtubeVideoIdentity } from "./auto-analysis.js";
+import { youtubeVideoIdentity } from "./youtube.js";
 import { isExcludedSite, isQuietTime, normalizeSettings } from "./settings.js";
 import { playbackStreamKey } from "./validation.js";
 

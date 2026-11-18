@@ -5,5 +5,6 @@ export * from "./nudges.js";
 export * from "./analysis.js";
 export * from "./storage.js";
 export * from "./auto-analysis.js";
+export * from "./youtube.js";
 export * from "./gemini-protocol.js";
 export * from "./goal-checkin.js";

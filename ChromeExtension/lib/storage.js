@@ -1,7 +1,7 @@
 import { validatePlaybackEvent } from "./validation.js";
 import { validateAnalysisJob, validateAnalysisResult } from "./analysis.js";
 import { safeSettingsExport } from "./settings.js";
-import { isUnidentifiedYouTubeURL } from "./auto-analysis.js";
+import { isUnidentifiedYouTubeURL } from "./youtube.js";
 
 export const DATABASE_NAME = "watchwise";
 export const DATABASE_VERSION = 4;

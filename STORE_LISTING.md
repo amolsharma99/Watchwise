@@ -1,6 +1,6 @@
-# Chrome Web Store listing draft
+# Chrome Web Store listing draft — experimental AI build, do not submit
 
-This draft matches the public Watchwise package. Screenshots use clearly labelled demonstration data and the extension's own interface. The Privacy tab must link to the [published privacy policy](PRIVACY.md).
+This draft describes the experimental AI-enabled build. **Do not submit its v0.3.9 ZIP for a general public listing while the [Gemini API Terms issue](RELEASE_PLAN.md#current-decision-gate) remains unresolved.** Screenshots use clearly labelled demonstration data and the extension's own interface. A future eligible AI release would need privacy declarations consistent with the [AI build privacy policy](PRIVACY.md).
 
 ## Store listing
 

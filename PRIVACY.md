@@ -2,7 +2,7 @@
 
 Last updated: 18 November 2026
 
-Watchwise is a Chrome extension that helps you understand and reduce passive video watching. It has no Watchwise account, advertising, analytics service, or developer-operated server. Its viewing history stays in the Chrome profile on your device. This policy covers the Chrome extension distributed by the Watchwise project.
+Watchwise is a Chrome extension that helps you understand and reduce passive video watching. It has no Watchwise account, advertising, analytics service, or developer-operated server. Its viewing history stays in the Chrome profile on your device. This policy covers the **experimental AI-enabled source build**. The proposed local-only Chrome Web Store edition has its own [privacy policy](store/PRIVACY.md).
 
 ## What Watchwise handles
 
@@ -16,7 +16,7 @@ Viewing events, analysis jobs, and results are stored in the extension's local I
 
 Gemini analysis requires separate consent **and your own API key**. Automatic analysis is enabled as a preference, but cannot run until you enable AI consent and save a key; you can switch automatic analysis off and still use the manual Analyse action. When an eligible public YouTube video is analysed, Watchwise sends its public YouTube URL, an analysis prompt and your API key directly from your browser to Google's Gemini API. The request asks Google to store the interaction so asynchronous processing can be polled. Google processes that request and returns a summary, key moments, possible skips, and a cautious information-value assessment; Watchwise saves the result locally. No viewing-history export or non-YouTube page content is sent to Gemini.
 
-The Gemini feature may use paid API quota or incur charges on your Google account. Google handles the submitted request under its own [Gemini API terms and privacy information](https://ai.google.dev/gemini-api/terms). Watchwise's **Delete history** action removes local analysis records but cannot remove interactions already held by Google. Summaries and verdicts are model assessments, not external fact-checks.
+The Gemini feature may use paid API quota or incur charges on your Google account. Google's [Gemini API terms](https://aistudio.google.com/docs/terms) say that, for unpaid service, submitted inputs and outputs may be used to improve Google's products and may be reviewed by humans; paid-service data is handled differently under those terms. The request uses stored interactions for asynchronous processing. Watchwise's **Delete history** action removes local analysis records but cannot remove interactions already held by Google; manage those through your Google AI project. Summaries and verdicts are model assessments, not external fact-checks.
 
 ## Sharing, retention, and your controls
 

@@ -1,5 +1,5 @@
 import { playbackStreamKey } from "./validation.js";
-import { isUnidentifiedYouTubeURL, youtubeVideoIdentity } from "./auto-analysis.js";
+import { isUnidentifiedYouTubeURL, youtubeVideoIdentity } from "./youtube.js";
 
 const PLAYING_STATES = new Set(["playing", "heartbeat", "rate_changed"]);
 const INTENTIONAL_START_SECONDS = 3;
