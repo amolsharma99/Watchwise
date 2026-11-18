@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Watchwise</title>
+  <style>:root{color-scheme:light dark;--bg:#f5f6fa;--surface:rgba(255,255,255,.72);--border:rgba(84,77,115,.14);--text:#181622;--muted:#686576;--accent:#6d4aff;--accent2:#8b6cff;--danger:#c13545;--shadow:0 16px 46px rgba(60,48,100,.09);font:14px/1.45 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% -10%,rgba(139,108,255,.18),transparent 34%),var(--bg);color:var(--text);min-width:320px;min-height:100vh}.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:rgba(245,246,250,.78);backdrop-filter:blur(22px)}.brand{display:flex;align-items:center;gap:10px}.brand>div{display:grid}.brand strong{font-size:14px}.brand span:last-child{color:var(--muted);font-size:11px}.mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:linear-gradient(145deg,var(--accent2),var(--accent));color:white;font-weight:800;box-shadow:0 7px 20px rgba(109,74,255,.28)}main{padding:14px 14px 28px}.icon-button,.text-button{border:0;background:transparent;color:var(--muted);cursor:pointer}.icon-button{font-size:22px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);padding:4px;margin-bottom:18px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.52);backdrop-filter:blur(14px)}.tab{padding:8px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-weight:650;cursor:pointer}.tab.active{background:var(--surface);color:var(--text);box-shadow:0 2px 10px rgba(50,40,90,.10)}.panel{display:none}.panel.active{display:block}.section-heading,.card-title,.result-head{display:flex;align-items:center;justify-content:space-between;gap:10px}h1{margin:0 0 15px;font-size:25px;line-height:1.15;letter-spacing:-.025em}h2{margin:0;font-size:15px}h3{margin:20px 0 8px;font-size:13px}.eyebrow{margin:0 0 5px;color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase}.lede,.small,.card p{color:var(--muted)}.lede{margin-top:-7px}.small{font-size:12px}.card{padding:15px;margin:0 0 12px;border:1px solid var(--border);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);backdrop-filter:blur(18px)}.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.metric{display:grid;min-height:115px}.metric span,.metric small{color:var(--muted);font-size:11px}.metric strong{align-self:center;font-size:27px;letter-spacing:-.04em}.pill,.verdict{padding:5px 9px;border-radius:999px;background:rgba(109,74,255,.12);color:var(--accent);font-size:11px;font-weight:750}.pill.off{background:rgba(100,100,110,.10);color:var(--muted)}.site-list{display:grid;gap:10px;margin-top:12px}.site-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.site-row strong{overflow:hidden;text-overflow:ellipsis}.bar{grid-column:1/-1;height:5px;border-radius:9px;background:rgba(109,74,255,.10);overflow:hidden}.bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),#b19cff)}.empty{text-align:center;padding:12px}.intent-card{display:grid;gap:12px}.intent-card p{margin:4px 0}.button{border:0;border-radius:11px;padding:9px 12px;font:700 12px inherit;cursor:pointer}.button.primary{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 7px 22px rgba(109,74,255,.24)}.button.subtle{border:1px solid var(--border);background:rgba(255,255,255,.50);color:var(--text)}.button.danger{background:rgba(193,53,69,.12);color:var(--danger)}button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.form-card,.settings-group{display:grid;gap:12px}label{display:grid;gap:6px;font-size:12px;font-weight:650}input{width:100%;border:1px solid var(--border);border-radius:11px;padding:10px;background:rgba(255,255,255,.60);color:var(--text);font:inherit}.status{min-height:28px;color:var(--muted);font-size:12px}.result{margin-top:8px}.result p{white-space:pre-wrap}.timeline{display:grid;gap:7px}.moment{display:flex;gap:9px;align-items:flex-start;padding:8px;border-radius:10px;background:rgba(109,74,255,.06)}.timestamp{border:0;background:transparent;color:var(--accent);font-weight:750;cursor:pointer}.caveat{padding-top:12px;border-top:1px solid var(--border);font-size:11px}.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.switch-row>span{display:grid}.switch-row small{color:var(--muted);font-weight:400}.switch-row input{width:38px}.check{display:flex;align-items:flex-start;gap:8px}.check input{width:16px}.button-row,.inline-form,.two-column{display:flex;gap:8px}.button-row>*{flex:1}.inline-form input{flex:1}.two-column>*{flex:1}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:99px;background:rgba(109,74,255,.09);font-size:11px}.chip button{border:0;background:transparent;color:var(--muted);cursor:pointer}.danger-zone{border-color:rgba(193,53,69,.2)}.onboarding{margin-top:18px}.onboarding h1{font-size:23px}.privacy-list{padding-left:20px;color:var(--muted)}.panel-toast{position:fixed;right:14px;bottom:14px;left:14px;z-index:20;padding:12px 14px;border-radius:13px;background:#252231;color:white;box-shadow:0 12px 40px rgba(0,0,0,.28)}[hidden]{display:none!important}
+.breakdown-title{align-items:flex-start}.range-toggle{display:flex;padding:2px;border-radius:9px;background:rgba(109,74,255,.08)}.range-toggle button{border:0;border-radius:7px;padding:5px 8px;background:transparent;color:var(--muted);font:700 10px inherit;cursor:pointer}.range-toggle button.active{background:var(--surface);color:var(--accent);box-shadow:0 2px 8px rgba(50,40,90,.10)}.video-list{display:grid;gap:8px;margin-top:12px}.video-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px;border-radius:12px;background:rgba(109,74,255,.05)}.video-row strong{display:-webkit-box;overflow:hidden;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal}.video-row time{font-size:12px;font-weight:750}.video-meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}.video-meta a{color:var(--accent);font-weight:700;text-decoration:none}.video-meta a:hover{text-decoration:underline}.video-meta a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-color-scheme:dark){:root{--bg:#121118;--surface:rgba(35,32,45,.76);--border:rgba(220,210,255,.12);--text:#f5f2ff;--muted:#aaa4ba;--shadow:0 16px 46px rgba(0,0,0,.18)}.topbar{background:rgba(18,17,24,.78)}.tabs,.button.subtle,input{background:rgba(255,255,255,.05)}}
+@media(max-width:360px){.metric-grid{grid-template-columns:1fr}.two-column{display:grid}}
+.metric-grid .card{margin-bottom:0}.metric-grid{margin-bottom:10px}.week-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 10px;padding:11px 15px}.week-summary span{font-size:12px;font-weight:700}.week-summary strong{font-size:18px;letter-spacing:-.02em}.week-summary small{color:var(--muted);font-size:11px}.week-summary small:last-child{text-align:right}
+.method-note{margin-top:8px;color:var(--muted);font-size:11px}.method-note summary{width:max-content;max-width:100%;color:var(--accent);cursor:pointer}.method-note summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.method-note p{margin:6px 0 0}
+@media(max-width:360px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<style>
+html { background: #e8e6f2; }
+html::before { content: 'DEMO VIDEO PAGE'; position: fixed; top: 42px; left: 18px;
+  width: 172px; height: 260px; border-radius: 16px; display: grid; place-items: center;
+  color: #7b7295; font: 700 11px system-ui; letter-spacing: .1em;
+  background: linear-gradient(140deg, #d9d5e8, #f7f5fb); box-shadow: 0 8px 30px #625a7d22; }
+body { width: 420px; min-width: 420px; margin-left: 220px; min-height: 800px;
+  box-shadow: -10px 0 34px #625a7d24; }
+</style>
+
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark" aria-hidden="true">W</span><div><strong>Watchwise</strong><span id="buildVersion">Watch with intent · loading version</span></div></div>
+    <button id="refresh" class="icon-button" title="Refresh dashboard" aria-label="Refresh dashboard">↻</button>
+  </header>
+
+  <main>
+    <section id="onboarding" class="card onboarding" hidden>
+      <p class="eyebrow">Private by default</p>
+      <h1>Understand your viewing without recording your screen.</h1>
+      <p>Watchwise needs access to HTTPS pages so it can detect visible HTML5 video elements across sites and frames. It records only title, URL, site, playback position, duration, speed, state and time after you opt in.</p>
+      <ul class="privacy-list">
+        <li>No pixels, audio, captions, arbitrary page-body text or cookies</li>
+        <li>Titles come only from media attributes, Media Session, page title metadata and, on Netflix /watch/ pages, exact player-title metadata</li>
+        <li>History stays in this browser’s IndexedDB</li>
+        <li>With AI consent, Watchwise sends the public YouTube URL and analysis instructions directly to Google Gemini using your saved key; requests may consume your quota</li>
+        <li>Your Gemini key stays in local extension storage except when sent over HTTPS to Google for an analysis you allowed</li>
+      </ul>
+      <label class="check"><input id="onboardTracking" type="checkbox"><span>Enable local video tracking</span></label>
+      <label class="check"><input id="onboardAI" type="checkbox"><span>Allow optional Gemini analysis of public YouTube videos</span></label>
+      <button id="finishOnboarding" class="button primary">Continue</button>
+    </section>
+
+    <div id="app" hidden>
+      <nav class="tabs" aria-label="Watchwise sections">
+        <button class="tab active" data-panel="overview">Overview</button>
+        <button class="tab" data-panel="analyse">Analyse</button>
+        <button class="tab" data-panel="settings">Settings</button>
+      </nav>
+
+      <section id="overview" class="panel active" aria-labelledby="overview-title">
+        <div class="section-heading"><div><p class="eyebrow">Your attention</p><h1 id="overview-title">Today</h1></div><span id="trackingPill" class="pill off">Tracking off</span></div>
+        <div class="metric-grid">
+          <article class="metric card"><span>Active watching</span><strong id="todayTime">0m</strong><small>Time spent today</small></article>
+          <article class="metric card"><span>Videos started</span><strong id="todayStarted">0</strong><small>Played for 3+ seconds</small></article>
+        </div>
+        <div class="week-summary card"><span>This week</span><strong id="weekTime">0m</strong><small id="weekVideos">0 starts</small><small id="weekComparison" hidden></small></div>
+        <section class="card">
+          <div class="card-title"><h2>Top sites</h2><span>Today</span></div>
+          <div id="sites" class="site-list"><p class="empty">No viewing recorded yet.</p></div>
+        </section>
+        <section class="card">
+          <div class="card-title breakdown-title"><h2>Video breakdown</h2><div class="range-toggle" aria-label="Video breakdown period"><button class="active" data-video-range="today">Today</button><button data-video-range="week">Week</button></div></div>
+          <details class="method-note"><summary>How time is counted</summary><p>Simultaneous time is shared across active videos, so rows add up to the overall total.</p></details>
+          <div id="videoBreakdown" class="video-list"><p class="empty">No watched videos yet.</p></div>
+        </section>
+        <section class="card intent-card">
+          <div><h2>Need quiet time?</h2><p>Movie Mode silences nudges and AI suggestions while local viewing totals continue.</p></div>
+          <button id="movieModeQuick" class="button subtle">Movie Mode · 2h</button>
+        </section>
+      </section>
+
+      <section id="analyse" class="panel" aria-labelledby="analyse-title">
+        <p class="eyebrow">Automatic + manual</p><h1 id="analyse-title">Analyse a public YouTube video</h1>
+        <p class="lede">With AI consent and a saved key, Gemini analyses public YouTube videos automatically after you start watching. Turn this off in Settings, or analyse a URL manually below. Requests may use paid API quota.</p>
+        <form id="analysisForm" class="card form-card">
+          <label for="analysisURL">Public YouTube video URL</label>
+          <input id="analysisURL" name="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required autocomplete="off">
+          <button class="button primary" type="submit">Analyse with Gemini</button>
+        </form>
+        <div id="analysisStatus" class="status" role="status" aria-live="polite"></div>
+        <article id="analysisResult" class="card result" hidden>
+          <div class="result-head"><span id="verdict" class="verdict">Pending</span><span id="confidence"></span></div>
+          <h2>Quick take</h2><p id="summary"></p>
+          <h3>Key moments</h3><div id="keyPoints" class="timeline"></div>
+          <h3>Possible skips</h3><div id="skipSegments" class="timeline"></div>
+          <h3>Evidence signals</h3><ul id="evidence"></ul>
+          <p id="caveat" class="caveat"></p>
+        </article>
+      </section>
+
+      <section id="settings" class="panel" aria-labelledby="settings-title">
+        <p class="eyebrow">Your controls</p><h1 id="settings-title">Settings</h1>
+        <section class="card settings-group">
+          <label class="switch-row"><span><strong>Track visible videos</strong><small>Off by default; local history only</small></span><input id="trackingEnabled" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>In-page alerts</strong><small>Brief nudges and analysis-ready toasts in video tabs</small></span><input id="notificationsEnabled" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Allow Gemini analysis</strong><small>Requires your saved key; manual analysis remains available</small></span><input id="aiConsent" type="checkbox" role="switch"></label>
+          <label class="switch-row"><span><strong>Analyse new YouTube videos automatically</strong><small>On by default after consent; meaningful active playback only, and may use paid API quota</small></span><input id="autoAnalysisEnabled" type="checkbox" role="switch"></label>
+        </section>
+        <section class="card settings-group">
+          <div class="card-title"><h2>Interruption controls</h2></div>
+          <label>Daily viewing target <span id="dailyLimitLabel">60 minutes</span><input id="dailyLimit" type="range" min="15" max="240" step="15" value="60"></label>
+          <div class="button-row"><button id="movieMode" class="button subtle">Movie Mode · 2h</button><button id="snooze" class="button subtle">Snooze · 30m</button></div>
+          <div class="two-column"><label>Quiet from<input id="quietStart" type="time" value="22:00"></label><label>Until<input id="quietEnd" type="time" value="08:00"></label></div>
+          <label class="check"><input id="quietEnabled" type="checkbox"><span>Enable quiet hours</span></label>
+        </section>
+        <section class="card settings-group">
+          <div class="card-title"><h2>Excluded sites</h2></div>
+          <form id="exclusionForm" class="inline-form"><input id="excludedSite" placeholder="example.com" autocomplete="off"><button class="button subtle" type="submit">Add</button></form>
+          <div id="exclusions" class="chips"></div>
+        </section>
+        <section class="card settings-group">
+          <div class="card-title"><h2>Gemini API key</h2><span id="keyStatus">Not saved</span></div>
+          <p class="small">Stored in extension-only Chrome storage, hidden from content scripts and excluded from exports.</p>
+          <form id="keyForm" class="inline-form"><input id="apiKey" type="password" placeholder="Paste key" autocomplete="off"><button class="button subtle" type="submit">Save</button></form>
+          <button id="clearKey" class="text-button">Clear saved key</button>
+        </section>
+        <section class="card settings-group danger-zone">
+          <div><h2>Your data</h2><p class="small">Export viewing history, analysis records and safe settings—never the API key—or permanently delete local history.</p></div>
+          <div class="button-row"><button id="exportData" class="button subtle">Export JSON</button><button id="deleteData" class="button danger">Delete history</button></div>
+        </section>
+      </section>
+    </div>
+  </main>
+  <div id="toast" class="panel-toast" role="status" aria-live="polite" hidden></div>
+  
+<script>
+const $ = (id) => document.getElementById(id);
+$('app').hidden = false;
+$('onboarding').hidden = true;
+$('buildVersion').textContent = 'Watch with intent · v0.3.9';
+$('trackingPill').textContent = 'Tracking on';
+$('trackingPill').classList.remove('off');
+for (const id of ['trackingEnabled', 'notificationsEnabled']) $(id).checked = true;
+$('todayTime').textContent = '24m';
+$('todayStarted').textContent = '3';
+$('weekTime').textContent = '2h 14m';
+$('weekVideos').textContent = '12 starts';
+$('sites').innerHTML = `
+  <div class="site-row"><strong>youtube.com</strong><span>16m</span><div class="bar"><i style="width:100%"></i></div></div>
+  <div class="site-row"><strong>netflix.com</strong><span>8m</span><div class="bar"><i style="width:50%"></i></div></div>`;
+$('videoBreakdown').innerHTML = `
+  <div class="video-row"><strong>How to plan a focused workday</strong><time>12m</time><div class="video-meta"><span>youtube.com</span><a href="https://www.youtube.com/watch?v=9hE5-98ZeCg">Open video</a></div></div>
+  <div class="video-row"><strong>Example documentary episode</strong><time>8m</time><div class="video-meta"><span>netflix.com</span><a href="https://www.netflix.com/watch/12345678">Open video</a></div></div>
+  <div class="video-row"><strong>Short video example</strong><time>4m</time><div class="video-meta"><span>youtube.com</span><a href="https://www.youtube.com/shorts/9hE5-98ZeCg">Open video</a></div></div>`;
+
+      document.querySelectorAll('.panel').forEach((panel) => panel.classList.toggle('active', panel.id === 'settings'));
+      document.querySelector('.tabs').remove();
+      document.querySelector('#settings > .eyebrow').remove();
+      document.querySelector('#settings > h1').remove();
+      document.querySelector('#settings > .settings-group').remove();
+      window.scrollTo(0, 0);
+    </script></body>
+</html>

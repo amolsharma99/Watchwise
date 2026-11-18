@@ -30,6 +30,7 @@ import {
   playbackStreamKey,
   ProviderProtocolError,
   restartAction,
+  retainAnalysisSourcesForJobs,
   summarizeViewing,
   transitionAnalysisJob,
   validatePlaybackEvent,
@@ -149,7 +150,18 @@ async function setInitialState() {
   if (!stored[SETTINGS_KEY]) await chrome.storage.local.set({ [SETTINGS_KEY]: normalizeSettings() });
   if (typeof stored[ONBOARDING_KEY] !== "boolean") await chrome.storage.local.set({ [ONBOARDING_KEY]: false });
   await repository.open();
+  await pruneRetainedData(Date.now() - RETENTION_MS);
   await ensureAlarms();
+}
+
+async function pruneRetainedData(beforeMs) {
+  return withDataMutation(async () => {
+    await repository.prune(beforeMs);
+    const jobs = await repository.listAnalysisJobs();
+    const stored = await localGet(ANALYSIS_SOURCES_KEY);
+    const retainedSources = retainAnalysisSourcesForJobs(stored[ANALYSIS_SOURCES_KEY], jobs);
+    await localSet({ [ANALYSIS_SOURCES_KEY]: retainedSources });
+  });
 }
 
 async function ensureAlarms() {
@@ -884,12 +896,6 @@ async function handlePrivilegedMessage(message) {
     case "CLEAR_API_KEY": await localRemove(API_KEY); return { ok: true };
     case "ANALYZE_URL": return { ok: true, job: await startAnalysis(message.url) };
     case "SEEK_TIMESTAMP": await seekTimestamp(message); return { ok: true };
-    case "EXPORT_HISTORY": {
-      const data = await repository.exportData(await getSettings());
-      const encoded = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
-      await chrome.downloads.download({ url: encoded, filename: `watchwise-export-${new Date().toISOString().slice(0, 10)}.json`, saveAs: true });
-      return { ok: true };
-    }
     case "DELETE_HISTORY": {
       historyGeneration += 1;
       await withDataMutation(async () => {
@@ -953,7 +959,7 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ANALYSIS_ALARM) void resumeAnalysisJobs();
   if (alarm.name === INSIGHTS_ALARM) void announceDashboardUpdated();
-  if (alarm.name === PRUNE_ALARM) void repository.prune(Date.now() - RETENTION_MS);
+  if (alarm.name === PRUNE_ALARM) void pruneRetainedData(Date.now() - RETENTION_MS).catch(() => {});
 });
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 void initializationPromise.then(recoverExistingContentScripts).catch(() => {});

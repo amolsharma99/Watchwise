@@ -28,8 +28,8 @@ export function buildInteractionRequest(job, { background = true } = {}) {
     background,
     store: true,
     input: [
-      { type: "video", uri: job.url },
-      { type: "text", text: analysisPrompt(job.jobID) }
+      { type: "text", text: analysisPrompt(job.jobID) },
+      { type: "video", uri: job.url }
     ],
     response_format: { type: "text", mime_type: "application/json", schema: INTERACTION_RESPONSE_SCHEMA }
   };

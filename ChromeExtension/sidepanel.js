@@ -1,4 +1,5 @@
 import { shouldAcceptAnalysisJobUpdate } from "./lib/analysis.js";
+import { IndexedDBRepository } from "./lib/storage.js";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -7,6 +8,7 @@ let breakdownRange = "today";
 let refreshSequence = 0;
 let versionMismatchNotified = false;
 let renderedAnalysisJob = null;
+const repository = new IndexedDBRepository();
 
 async function send(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
@@ -344,8 +346,23 @@ $("#analysisForm").addEventListener("submit", async (event) => {
   } catch (error) { $("#analysisStatus").textContent = error.message; }
 });
 $("#exportData").addEventListener("click", async () => {
-  try { await send("EXPORT_HISTORY"); notify("History export started."); }
-  catch (error) { notify(error.message, true); }
+  try {
+    await repository.open();
+    const data = await repository.exportData(dashboard?.settings ?? {});
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    try {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `watchwise-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    notify("History exported.");
+  } catch (error) {
+    notify(error instanceof Error ? error.message : "Watchwise could not export your history.", true);
+  }
 });
 $("#deleteData").addEventListener("click", async () => {
   if (!confirm("Delete all local Watchwise viewing history and analysis jobs? This cannot be undone.")) return;

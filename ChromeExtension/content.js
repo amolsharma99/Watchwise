@@ -300,7 +300,8 @@
     const isGoalCheckIn = message.priority === "goal_checkin";
     if ((!isGoalCheckIn && now - lastToastAt < TOAST_COOLDOWN_MS) || typeof message.text !== "string") return false;
     const fullscreenRoot = document.fullscreenElement;
-    if (fullscreenRoot instanceof HTMLVideoElement) return false;
+    if (fullscreenRoot instanceof HTMLVideoElement
+      || (typeof HTMLIFrameElement !== "undefined" && fullscreenRoot instanceof HTMLIFrameElement)) return false;
     document.querySelector("#watchwise-toast-host")?.remove();
     const host = document.createElement("div");
     host.id = "watchwise-toast-host";

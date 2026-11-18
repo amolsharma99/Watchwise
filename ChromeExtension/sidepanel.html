@@ -18,9 +18,11 @@
       <h1>Understand your viewing without recording your screen.</h1>
       <p>Watchwise needs access to HTTPS pages so it can detect visible HTML5 video elements across sites and frames. It records only title, URL, site, playback position, duration, speed, state and time after you opt in.</p>
       <ul class="privacy-list">
-        <li>No pixels, audio, captions, page body or cookies</li>
+        <li>No pixels, audio, captions, arbitrary page-body text or cookies</li>
+        <li>Titles come only from media attributes, Media Session, page title metadata and, on Netflix /watch/ pages, exact player-title metadata</li>
         <li>History stays in this browser’s IndexedDB</li>
-        <li>With AI consent and your saved key, new YouTube videos are analysed automatically and may use paid Gemini quota</li>
+        <li>With AI consent, Watchwise sends the public YouTube URL and analysis instructions directly to Google Gemini using your saved key; requests may consume your quota</li>
+        <li>Your Gemini key stays in local extension storage except when sent over HTTPS to Google for an analysis you allowed</li>
       </ul>
       <label class="check"><input id="onboardTracking" type="checkbox"><span>Enable local video tracking</span></label>
       <label class="check"><input id="onboardAI" type="checkbox"><span>Allow optional Gemini analysis of public YouTube videos</span></label>

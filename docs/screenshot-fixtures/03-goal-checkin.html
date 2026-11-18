@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}body{margin:0;background:#131722;color:white;font-family:system-ui}
+.page{height:400px;background:linear-gradient(125deg,#232a3c,#171b2b 54%,#302743);position:relative}
+.demo{position:absolute;left:24px;top:22px;font-size:11px;letter-spacing:.12em;color:#b7b4c4;font-weight:700}
+.video{position:absolute;left:28px;top:68px;width:584px;height:270px;border-radius:14px;background:linear-gradient(140deg,#252b43,#171d2c 60%,#51436b);box-shadow:0 20px 50px #0005}
+.play{position:absolute;left:48%;top:42%;width:52px;height:52px;border-radius:50%;background:#ffffff36;display:grid;place-items:center;font-size:20px}
+.bar{position:absolute;left:18px;right:18px;bottom:20px;height:5px;border-radius:6px;background:#ffffff40}.bar::before{content:'';display:block;width:24%;height:100%;border-radius:6px;background:#b6a7ff}
+#watchwise-toast-host{all:initial;position:fixed;z-index:2147483647;right:20px;bottom:20px;pointer-events:none}
+.toast{box-sizing:border-box;width:340px;padding:14px 15px;border:1px solid rgba(255,255,255,.28);border-radius:16px;background:rgba(22,25,35,.84);box-shadow:0 14px 48px rgba(0,0,0,.32);backdrop-filter:blur(18px);color:#f8fafc;font:500 14px/1.45 system-ui,-apple-system,sans-serif;pointer-events:auto}
+.brand{color:#c4b5fd;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.message{margin:5px 0 11px}.actions{display:flex;gap:8px;justify-content:flex-end}button{border:0;border-radius:9px;padding:7px 10px;font:600 12px system-ui;cursor:pointer}button.quiet{background:rgba(255,255,255,.10);color:#f8fafc}
+</style></head><body><div class="page"><div class="demo">DEMONSTRATION VIDEO PAGE</div><div class="video"><div class="play">▶</div><div class="bar"></div></div></div>
+<div id="watchwise-toast-host"><section class="toast" role="status"><div class="brand">Watchwise</div><div class="message">Hope you’re clear on your goal for watching this video.</div><div class="actions"><button class="quiet">Dismiss</button></div></section></div>
+</body></html>

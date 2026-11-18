@@ -17,6 +17,8 @@ gemini_protocol = File.read(File.join(root, "lib", "gemini-protocol.js"))
 storage = File.read(File.join(root, "lib", "storage.js"))
 goal_checkin = File.read(File.join(root, "lib", "goal-checkin.js"))
 readme = File.read(File.join(root, "README.md"))
+store_allowlist = File.readlines(File.join(root, "store-package-files.txt"), chomp: true).map(&:strip).reject { |line| line.empty? || line.start_with?("#") }
+store_packager = File.read(File.join(root, "scripts", "package_store.rb"))
 
 def assert(condition, message)
   raise message unless condition
@@ -24,11 +26,25 @@ end
 
 assert(manifest["manifest_version"] == 3, "Manifest V3 required")
 assert(manifest["version"] == "0.3.9", "Acknowledged goal check-in release must use extension version 0.3.9")
+assert(manifest["minimum_chrome_version"] == "116", "Chrome 116 is required for sidePanel.open")
 assert(manifest["host_permissions"] == ["https://*/*"], "Expected disclosed HTTPS host scope")
 assert(manifest["incognito"] == "not_allowed", "Incognito must be disabled")
 assert(!manifest.fetch("permissions", []).include?("nativeMessaging"), "Native messaging is forbidden")
+assert(!manifest.fetch("permissions", []).include?("tabs"), "Broad HTTPS access already grants required tab URL fields; tabs permission is redundant")
+assert(!manifest.fetch("permissions", []).include?("downloads"), "Explicit side-panel export must not require download-management access")
+assert(manifest.fetch("permissions") == %w[alarms scripting sidePanel storage], "Store manifest permissions are not the exact reviewed minimum")
 assert(manifest.fetch("permissions", []).include?("scripting"), "Existing-tab content recovery requires the scripting permission")
 assert(manifest.dig("content_scripts", 0, "all_frames") == true, "All-frame tracking required")
+assert(store_allowlist.first == "manifest.json", "Store archive must put manifest.json at its root")
+%w[README.md AGENTS.md LEGACY_NOTES.md assets/icon.svg nano-pilot.html nano-pilot.css nano-pilot.js nano-sample.txt].each do |excluded|
+  assert(!store_allowlist.include?(excluded), "Store package must exclude #{excluded}")
+end
+assert(store_allowlist.none? { |path| path.start_with?("tests/") }, "Store package must exclude tests")
+assert(store_packager.include?("secret_patterns") && store_packager.include?("remote_code_patterns") && store_packager.include?("listing.lines.map(&:chomp) == files") && store_packager.include?("imports excluded module"), "Store packager lacks secret, remote-code, module-dependency or exact-entry validation")
+{ "16" => 16, "32" => 32, "48" => 48, "128" => 128 }.each do |key, size|
+  path = "assets/icon#{size}.png"
+  assert(manifest.dig("icons", key) == path && manifest.dig("action", "default_icon", key) == path && store_allowlist.include?(path), "Missing packaged #{size}px icon")
+end
 
 assert(!content.include?("chrome.storage"), "Content script must not read storage")
 assert(content.include?("IntersectionObserver"), "IntersectionObserver visibility gate missing")
@@ -78,8 +94,10 @@ assert(manifest["host_permissions"].include?("https://*/*"), "Gemini HTTPS host 
 assert(background.include?("credentials: \"omit\"") && background.include?("referrerPolicy: \"no-referrer\""), "Gemini fetch privacy options are missing")
 assert(!background.match?(/[?&](?:key|api_key)=/i), "Gemini key must not appear in a URL")
 assert(!background.match?(/console\.(?:log|debug|info|warn|error)/), "Background must not log data or keys")
-assert(background.include?("repository.exportData(await getSettings())"), "Export must use safe settings")
-assert(!background.match?(/exportData\([^\n]*(?:API_KEY|geminiApiKey)/), "Export must not receive a key")
+assert(sidepanel_js.include?('import { IndexedDBRepository } from "./lib/storage.js";') && sidepanel_js.include?("repository.exportData(dashboard?.settings ?? {})"), "Side-panel export must read IndexedDB directly with safe dashboard settings")
+assert(sidepanel_js.include?("new Blob") && sidepanel_js.include?("URL.createObjectURL(blob)") && sidepanel_js.include?("URL.revokeObjectURL(url)"), "Side-panel export must use a temporary local object URL")
+assert(!background.include?("EXPORT_HISTORY") && !background.include?("chrome.downloads"), "Background must not manage downloads or receive exported history")
+assert(!sidepanel_js.match?(/exportData\([^\n]*(?:API_KEY|geminiApiKey)/), "Export must not receive a key")
 
 assert(background.include?("const settings = await getSettings();\n  if (!settings.aiEnabled) return;"), "Restart must stop when AI consent is disabled")
 assert(background.include?("if (action === \"submit\") await submitAnalysis(job, historyGeneration)"), "Restart submit actions are not resumed idempotently")
@@ -129,6 +147,10 @@ assert(delete_section&.include?("withDataMutation(async () => {"), "Delete is no
 assert(delete_section&.include?("sessions.clear();"), "Delete does not clear in-memory playback sessions")
 assert(delete_section&.include?("await repository.deleteAll();"), "Delete does not clear IndexedDB inside the mutation queue")
 assert(delete_section&.include?("await localSet({ [ANALYSIS_SOURCES_KEY]: {}, [NUDGE_STATE_KEY]: {}, [GOAL_CHECK_STATE_KEY]: {} });"), "Delete does not serialize source/nudge/goal metadata clearing")
+prune_section = background[/async function pruneRetainedData\(beforeMs\).*?^}/m]
+assert(prune_section&.match?(/withDataMutation.*?repository\.prune\(beforeMs\).*?repository\.listAnalysisJobs\(\).*?localGet\(ANALYSIS_SOURCES_KEY\).*?retainAnalysisSourcesForJobs.*?localSet\(\{ \[ANALYSIS_SOURCES_KEY\]: retainedSources \}\)/m), "Retention pruning does not serialize IndexedDB and analysis-source cleanup")
+assert(background.include?("await pruneRetainedData(Date.now() - RETENTION_MS);") && background.include?("if (alarm.name === PRUNE_ALARM) void pruneRetainedData"), "Analysis-source cleanup must run during initialization and scheduled pruning")
+assert(!prune_section.match?(/localSet\([^\n]*(?:API_KEY|SETTINGS_KEY)/), "Retention cleanup can mutate the API key or settings")
 assert(delete_section&.include?("await announceDashboardUpdated({ immediate: true });"), "Delete does not immediately refresh open dashboards")
 assert(background.match?(/const event = await withDataMutation\(async \(\) => \{.*?const sessionID = await resolveSessionID.*?repository\.putEvent\(validated\)/m), "Session resolution and event persistence are not serialized with deletion")
 assert(background.match?(/async function ingestPlayback.*?const generation = historyGeneration;.*?const settings = await getSettings\(\);.*?const revision = settingsRevision;.*?const event = await withDataMutation\(async \(\) => \{\s*if \(generation !== historyGeneration \|\| revision !== settingsRevision\) return null;\s*const sessionID = await resolveSessionID.*?if \(!event\) return \{ accepted: false \};/m), "In-flight playback can persist after deletion or a privacy-settings revision")
@@ -138,7 +160,7 @@ assert(background.match?(/sourceStored.*?generation !== historyGeneration.*?repo
 
 assert(gemini_protocol.include?("step.type !== \"model_output\""), "Provider output extraction is not restricted to model_output steps")
 assert(!gemini_protocol.include?("for (const child of Object.values(value))"), "Provider output still recursively scans user/thought text")
-assert(gemini_protocol.match?(/input:\s*\[\s*\{ type: \"video\".*?\},\s*\{ type: \"text\"/m), "Gemini request must place the video before the text prompt")
+assert(gemini_protocol.match?(/input:\s*\[\s*\{ type: \"text\".*?\},\s*\{ type: \"video\"/m), "Gemini request must place the instructions before the public video")
 assert(gemini_protocol.include?("store: true"), "Stored interaction retrieval is not enabled")
 assert(gemini_protocol.include?("response_format:"), "Structured Gemini response format is missing")
 assert(!gemini_protocol.include?("maxItems") && !gemini_protocol.include?("maxLength"), "Provider schema uses unsupported/high-complexity constraints")
@@ -193,6 +215,12 @@ assert(background.include?("interventionsAllowed(currentSettings, Date.now(), ev
 assert(background.include?("clearInterventions()") && background.include?("type: \"HIDE_TOAST\""), "Suppression must clear pending in-page toasts")
 
 assert(panel.include?("safe settings—never the API key"), "Export disclosure is inaccurate")
+assert(panel.include?("arbitrary page-body text") && options.include?("arbitrary page-body text"), "Privacy copy must distinguish strict metadata from arbitrary page-body scraping")
+assert(panel.include?("Netflix /watch/ pages") && options.include?("Netflix /watch/ pages") && panel.include?("exact player-title metadata") && options.include?("exact player-title metadata"), "Netflix title metadata fallback is not disclosed precisely")
+assert(!options.include?("nano-pilot.html"), "Experimental Nano pilot must not be linked from the public Options page")
+assert(panel.include?("directly to Google Gemini") && options.include?("directly to Google Gemini"), "AI consent does not identify Google as the receiving third party")
+assert(panel.include?("public YouTube URL and analysis instructions") && options.include?("public YouTube URL and analysis instructions"), "AI consent does not disclose the data sent to Google")
+assert(panel.include?("except when sent over HTTPS to Google") && options.include?("except when it is sent over HTTPS to Google"), "API-key transfer disclosure is missing")
 assert(options.include?("Public YouTube video URLs; requires your saved Gemini API key"), "Options does not disclose automatic-analysis scope/key requirement")
 assert(options.include?("each new video may use paid Gemini API quota"), "Options does not disclose automatic API cost")
 assert(background.include?("if ([\"playing\", \"heartbeat\"].includes(event.state) && event.isVisible && event.isTabActive)"), "Automatic analysis is not restricted to active visible playback progress")
@@ -268,7 +296,7 @@ assert(goal_checkin.match?(/if \(suppression\).*?nextState\.processed.*?return O
 assert(goal_checkin.match?(/suppression: "cadence".*?state: Object\.freeze\(nextState\)/m), "Cadence-blocked goal does not remain pending")
 assert(goal_checkin.include?("type: \"SHOW_TOAST\", text: GOAL_CHECKIN_MESSAGE, priority: \"goal_checkin\"") && goal_checkin.include?("response?.shown === true") && !goal_checkin.include?("actionLabel"), "Goal toast does not require the exact acknowledged priority message")
 assert(!goal_checkin.include?("browser.notifications") && !goal_checkin.include?("nudge:goal:"), "Goal check-in still creates a native notification")
-assert(content.include?("message.priority === \"goal_checkin\"") && content.include?("{ ok: true, shown }") && content.include?("document.fullscreenElement || document.documentElement"), "Content toast does not acknowledge actual/fullscreen priority display")
+assert(content.include?("message.priority === \"goal_checkin\"") && content.include?("{ ok: true, shown }") && content.include?("fullscreenRoot || document.documentElement") && content.include?("fullscreenRoot instanceof HTMLVideoElement") && content.include?("fullscreenRoot instanceof HTMLIFrameElement"), "Content toast does not acknowledge actual/container-fullscreen priority display")
 assert(goal_checkin.include?("export function isGoalPlaybackActive") && goal_checkin.include?("nowMs - latest.occurredAtMs <= freshnessMs"), "Goal delivery does not require fresh active playback")
 assert(background.include?("const GOAL_CHECK_STATE_KEY = \"goalCheckInState\"") && background.include?("localGet([GOAL_CHECK_STATE_KEY, NUDGE_STATE_KEY])"), "Goal reservations are not isolated from existing nudge state")
 assert(background.match?(/async function maybeGoalCheckIn.*?withDataMutation\(async \(\) => \{.*?evaluateGoalCheckIn.*?localSet\(\{ \[GOAL_CHECK_STATE_KEY\]/m), "Goal dedup reservation is not atomic and durable")

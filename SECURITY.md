@@ -1,14 +1,15 @@
 # Security and privacy model
 
-Watchwise is designed for personal, local-first use.
+The public product is the `ChromeExtension/` Manifest V3 extension. The older Swift app and browser bridge in this repository are legacy source and are not packaged for Chrome Web Store distribution.
 
-- Tracking and remote analysis require separate affirmative consent.
-- When tracking is enabled, the browser extension reports the page title, canonical HTTPS URL/path, player-frame and top-level sites, and playback timing described in `ARCHITECTURE.md`. It strips query strings except the YouTube video ID. It does not capture pixels, audio, captions, cookies, form contents, or arbitrary page text, and it does not persist playback metadata in extension storage.
-- Viewing history is stored locally. There is no telemetry or third-party analytics.
-- A Gemini key must be supplied by the user and is stored with macOS Keychain services. It must never be placed in source, preferences, logs, or the extension.
-- Remote analysis accepts only public HTTPS URLs. Localhost, private-network hosts, file URLs, embedded credentials, and excluded sites are rejected.
-- Gemini value assessments are advisory. They include confidence, supporting signals, and a reminder that no external fact-checking was performed.
+- Tracking and Gemini consent are separate and off by default. The content script sees only supported HTML5 video playback and narrow title metadata. It does not collect pixels, audio, captions, cookies, forms, credentials, or arbitrary page text.
+- The extension records eligible video titles, canonical HTTPS URLs, sites, timestamps, position, duration, speed, and playback state in local IndexedDB. It does not send this history to a Watchwise server.
+- The optional Gemini API key is saved in `chrome.storage.local` with trusted-context access. The key is never returned to content scripts, placed in URLs, included in exports, or logged by Watchwise. Chrome profile storage is not a system Keychain.
+- Gemini requests send only the selected public YouTube URL, an analysis prompt, and the user's key directly to Google's API. The API request stores its interaction remotely for asynchronous polling. See [PRIVACY.md](PRIVACY.md) for the user-facing disclosure.
+- Remote analysis accepts only canonical public HTTPS YouTube URLs. Localhost, private-network hosts, file URLs, embedded credentials, and excluded sites are rejected.
+- Gemini value assessments are advisory. Results include a confidence score, supporting signals, and a reminder that no external fact-checking was performed.
+- Explicit Export JSON omits the API key. Delete history clears local viewing and analysis records, while Clear saved key removes the key separately.
 
 ## Reporting a problem
 
-Do not include viewing history, URLs, API keys, or database files in a bug report. Describe the behavior and provide a synthetic reproduction instead.
+Do not include viewing history, URLs, API keys, or database files in a bug report. Use a public or synthetic reproduction instead.

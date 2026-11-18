@@ -7,6 +7,12 @@ export const DATABASE_NAME = "watchwise";
 export const DATABASE_VERSION = 4;
 export const STORES = Object.freeze({ EVENTS: "playbackEvents", JOBS: "analysisJobs", RESULTS: "analysisResults" });
 
+export function retainAnalysisSourcesForJobs(rawSources, jobs) {
+  const sources = rawSources && typeof rawSources === "object" && !Array.isArray(rawSources) ? rawSources : {};
+  const retainedIDs = new Set(Array.isArray(jobs) ? jobs.map((job) => job?.jobID).filter((jobID) => typeof jobID === "string") : []);
+  return Object.freeze(Object.fromEntries(Object.entries(sources).filter(([jobID]) => retainedIDs.has(jobID))));
+}
+
 function requestPromise(request) {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);

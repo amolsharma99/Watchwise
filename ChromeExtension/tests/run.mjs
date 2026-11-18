@@ -31,6 +31,7 @@ import {
   isGoalPlaybackActive,
   isUnidentifiedYouTubeURL,
   modelOutputText,
+  retainAnalysisSourcesForJobs,
   restartAction,
   safeSettingsExport,
   shouldAcceptAnalysisJobUpdate,
@@ -734,7 +735,7 @@ await test("realistic seek then 5-second heartbeat pipeline acknowledges one goa
   }
   equal(prompts, 1);
   equal(calls.filter((item) => item.type === "SHOW_TOAST").length, 1);
-  equal(calls.filter((item) => item.message === GOAL_CHECKIN_MESSAGE).length, 1);
+  equal(calls.filter((item) => item.type === "SHOW_TOAST" && item.text === GOAL_CHECKIN_MESSAGE).length, 1);
 });
 
 await test("analysis job survives JSON restart and resumes safely", () => {
@@ -792,23 +793,23 @@ await test("IndexedDB open calls share one in-flight request", async () => {
   equal(openCount, 2);
 });
 
-await test("Gemini request uses stored background interaction with video before text", () => {
+await test("Gemini request uses stored background interaction with instructions before video", () => {
   const job = createAnalysisJob({ jobID: "gemini-request", url: "https://www.youtube.com/watch?v=abc", mediaTitle: "Video", nowMs: BASE });
   const request = buildInteractionRequest(job);
   equal(request.model, "gemini-3.8-flash");
   equal(request.background, true);
   equal(request.store, true);
   equal(request.input.length, 2);
-  equal(request.input[0].type, "video");
-  equal(request.input[0].uri, job.url);
-  equal(request.input[1].type, "text");
-  assert(request.input[1].text.includes(job.jobID));
+  equal(request.input[0].type, "text");
+  assert(request.input[0].text.includes(job.jobID));
+  equal(request.input[1].type, "video");
+  equal(request.input[1].uri, job.url);
   equal(request.response_format.type, "text");
   equal(request.response_format.mime_type, "application/json");
   equal(request.response_format.schema.additionalProperties, false);
-  assert(request.input[1].text.includes("at most 8 key points"));
-  assert(request.input[1].text.includes("at most 6 skip segments"));
-  assert(request.input[1].text.includes("at most 8 evidence signals"));
+  assert(request.input[0].text.includes("at most 8 key points"));
+  assert(request.input[0].text.includes("at most 6 skip segments"));
+  assert(request.input[0].text.includes("at most 8 evidence signals"));
 });
 
 await test("Gemini provider schema uses a compatibility-safe JSON Schema subset", () => {
@@ -856,7 +857,8 @@ await test("Gemini direct and wrapped interactions parse only latest model outpu
 await test("Gemini POST pending response keeps its durable interaction ID", async () => {
   const job = createAnalysisJob({ jobID: "gemini-pending", url: "https://www.youtube.com/watch?v=abc", mediaTitle: "Video", nowMs: BASE });
   const pending = await createInteraction(async (request) => {
-    equal(request.input[0].type, "video");
+    equal(request.input[0].type, "text");
+    equal(request.input[1].type, "video");
     return { id: "pending-interaction", status: "in_progress" };
   }, job);
   equal(interactionDisposition(pending), "pending");
@@ -978,6 +980,44 @@ await test("in-memory repository validates, exports safely, prunes, and deletes"
   equal((await repository.listAnalysisJobs()).length, 1); // non-terminal jobs survive pruning
   await repository.deleteAll();
   equal((await repository.listAnalysisJobs()).length, 0);
+});
+
+await test("analysis source retention follows pruned jobs without mutating settings or key", async () => {
+  const repository = new InMemoryRepository();
+  const terminal = transitionAnalysisJob(
+    createAnalysisJob({ jobID: "old-terminal", url: "https://youtube.com/watch?v=old", mediaTitle: "Old", nowMs: BASE }),
+    "failed",
+    { errorCode: "provider_failed" },
+    BASE + 1
+  );
+  const unfinished = createAnalysisJob({ jobID: "unfinished", url: "https://youtube.com/watch?v=new", mediaTitle: "New", nowMs: BASE });
+  await repository.putAnalysisJob(terminal);
+  await repository.putAnalysisJob(unfinished);
+
+  const localStorage = {
+    watchwiseSettings: { trackingEnabled: true },
+    geminiApiKey: "local-only-key",
+    unrelated: "preserve-me",
+    analysisSources: {
+      "old-terminal": { tabId: 1, frameId: 0, playerId: "old", pageSite: "youtube.com" },
+      unfinished: { tabId: 2, frameId: 0, playerId: "new", pageSite: "youtube.com" }
+    }
+  };
+
+  await repository.prune(BASE + 2);
+  const afterPrune = {
+    ...localStorage,
+    analysisSources: retainAnalysisSourcesForJobs(localStorage.analysisSources, await repository.listAnalysisJobs())
+  };
+  equal(Object.hasOwn(afterPrune.analysisSources, "old-terminal"), false);
+  equal(afterPrune.analysisSources.unfinished.playerId, "new");
+  equal(afterPrune.geminiApiKey, "local-only-key");
+  equal(afterPrune.watchwiseSettings.trackingEnabled, true);
+  equal(afterPrune.unrelated, "preserve-me");
+
+  await repository.deleteAll();
+  const afterDelete = retainAnalysisSourcesForJobs(afterPrune.analysisSources, await repository.listAnalysisJobs());
+  equal(Object.keys(afterDelete).length, 0);
 });
 
 await test("rabbit-hole helper isolates distinct sessions", () => {

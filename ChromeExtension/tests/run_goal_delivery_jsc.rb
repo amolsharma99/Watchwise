@@ -16,7 +16,16 @@ activity = source[active_start...active_finish].sub("export function", "function
 fixture = <<~JAVASCRIPT
   const GOAL_CHECKIN_MESSAGE = "Hope you’re clear on your goal for watching this video.";
   function playbackStreamKey(event) { return `${event.tabID}:${event.frameID}:${event.playerID}:${event.sessionID}`; }
-  function youtubeVideoIdentity(url) { const match = /(?:[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]+)/.exec(String(url)); return match ? { videoKey: `youtube:${match[1]}` } : null; }
+  function youtubeVideoIdentity(url) {
+    const value = String(url);
+    for (const marker of ["v=", "/embed/", "/shorts/", "/live/"]) {
+      const start = value.indexOf(marker);
+      if (start < 0) continue;
+      const id = value.slice(start + marker.length).split(/[?&#]/)[0].split("/")[0];
+      if (id) return { videoKey: `youtube:${id}` };
+    }
+    return null;
+  }
   #{activity}
   #{delivery}
   function assertDelivery(value, message) { if (!value) throw new Error(message); }

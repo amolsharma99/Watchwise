@@ -66,7 +66,8 @@ fixture = <<~JAVASCRIPT
     getAttribute() { return null; }
     focus() {}
   }
-  globalThis.Element = Element; globalThis.HTMLVideoElement = HTMLVideoElement; globalThis.innerHeight = 900;
+  class HTMLIFrameElement extends Element {}
+  globalThis.Element = Element; globalThis.HTMLVideoElement = HTMLVideoElement; globalThis.HTMLIFrameElement = HTMLIFrameElement; globalThis.innerHeight = 900;
   globalThis.location = { href: "https://www.youtube.com/watch?v=first", hostname: "www.youtube.com", pathname: "/watch" };
   globalThis.navigator = { mediaSession: { metadata: null } };
   globalThis.document = {
@@ -232,6 +233,10 @@ fixture = <<~JAVASCRIPT
   let directVideoFullscreen = null;
   runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin" }, {}, (response) => { directVideoFullscreen = response; });
   assertRecovery(directVideoFullscreen?.shown === false, "direct-video fullscreen falsely acknowledged an invisible toast");
+  document.fullscreenElement = new HTMLIFrameElement("iframe");
+  let directFrameFullscreen = null;
+  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin" }, {}, (response) => { directFrameFullscreen = response; });
+  assertRecovery(directFrameFullscreen?.shown === false, "direct-iframe fullscreen falsely acknowledged an invisible toast");
   document.fullscreenElement = fullscreenRoot;
 
   sendMode = "throw_invalidated";

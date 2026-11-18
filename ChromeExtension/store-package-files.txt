@@ -1,0 +1,24 @@
+# Chrome Web Store production payload. Paths are relative to ChromeExtension.
+manifest.json
+background.js
+content.js
+lib/analysis.js
+lib/auto-analysis.js
+lib/gemini-protocol.js
+lib/goal-checkin.js
+lib/index.js
+lib/insights.js
+lib/nudges.js
+lib/settings.js
+lib/storage.js
+lib/validation.js
+sidepanel.html
+sidepanel.css
+sidepanel.js
+options.html
+options.css
+options.js
+assets/icon16.png
+assets/icon32.png
+assets/icon48.png
+assets/icon128.png
