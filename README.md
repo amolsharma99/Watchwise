@@ -31,6 +31,10 @@ After about 15 seconds of actual playback, Watchwise can place a small transluce
 
 ![Watchwise in-page nudge interface preview with playful check-ins](docs/readme/nudges-ink-caramel.svg)
 
+**In the wild:**
+
+[![Watchwise in-page nudge shown during a video](docs/readme/real-nudge-example.png)](docs/readme/real-nudge-example.png)
+
 Long sessions, several videos in a row, and reaching your daily viewing target can prompt other reminders. Watchwise keeps them inside the page; it does not send Chrome or macOS notification banners.
 
 ## Quiet when you want it
