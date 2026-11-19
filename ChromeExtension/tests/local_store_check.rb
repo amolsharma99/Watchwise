@@ -49,7 +49,7 @@ Dir.mktmpdir("watchwise-local-check") do |stage|
   settings = File.read(File.join(stage, "lib", "settings.js"))
   assert(panel.scan(/data-panel=/).length == 2 && panel.include?('data-panel="overview"') && panel.include?('data-panel="settings"'), "public UI is not Overview + Settings only")
   assert(panel.include?('src="assets/icon32.png"') && !panel.include?('>W</span>'), "selected eye/play mark is missing from panel")
-  assert(handoff.include?('Ask in AI Studio') && handoff.include?('If you cannot access it') && handoff.include?('manualText.value = prompt'), "handoff prompt or safe manual fallback missing")
+  assert(handoff.include?('Ask in AI Studio') && handoff.include?('showManual(prompt, "Studio could not open.') && handoff.include?('manualText.value = prompt'), "handoff prompt or safe manual fallback missing")
   assert(!handoff.match?(/\bfetch\s*\(|XMLHttpRequest|WebSocket|chrome\.storage/), "handoff makes a network call or reads storage")
   assert(background.include?('url.searchParams.getAll("v")') && background.match?(/OPEN_AI_STUDIO.*?topFrame.*?frameVideoID.*?tabVideoID.*?frameVideoID !== tabVideoID.*?chrome\.tabs\.create\(\{ url: "https:\/\/aistudio\.google\.com\/prompts\/new_chat"/m), "Studio new-chat tab is not gated to the current top-frame YouTube watch video")
   assert(panel.include?('id="storageRecovery"') && panel.include?('id="resetSecureStorage"') && panel.include?("permanently deletes all Watchwise viewing history and settings"), "destructive secure-storage recovery UI is missing")

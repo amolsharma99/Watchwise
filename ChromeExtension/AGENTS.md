@@ -4,7 +4,7 @@ Watchwise helps people notice and reduce passive video watching. Design choices 
 
 - Keep the overview focused on time spent, meaningful video starts, and the videos that used the most time. Rank video rows by watched time and show a useful title and link when available.
 - Do not restore the removed “Content covered” or completion-count metrics. Avoid new vanity metrics unless the user asks for them and they clearly support intentional viewing.
-- Make the next useful action obvious. Keep Movie Mode and notification controls easy to find; put detailed settings and manual Gemini analysis behind their existing tabs.
+- Make the next useful action obvious. Keep Movie Mode and notification controls easy to find. The side panel has only Overview and Settings; the YouTube Studio handoff lives on the watch page. Keep optional automatic Gemini API controls and a collapsed latest result in Settings, without restoring a separate Analyse tab or manual API form.
 - Use plain language and short labels. Explain costs, privacy, and limits where a person makes the relevant choice, without filling the overview with technical details.
 - Keep tracking and AI consent explicit. Do not infer a video title from unrelated page body text or present an uncertain title as fact.
 - Before shipping a UX change, check the side panel at narrow width, empty and populated states, today/week switching, and that the visible dashboard matches the extension’s current version.

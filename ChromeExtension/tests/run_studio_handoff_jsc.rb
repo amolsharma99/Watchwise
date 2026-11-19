@@ -18,29 +18,35 @@ fixture = <<~JAVASCRIPT
   }
   const documentRoot = new Element("html"); documentRoot.isConnected = true;
   const actionRow = new Element("actions"); documentRoot.append(actionRow);
+  const documentListeners = {};
   let rowAvailable = true;
   function findElement(root, id) { if (root.id === id && root.isConnected) return root; for (const child of root.children) { const found = findElement(child, id); if (found) return found; } return null; }
   const document = {
     documentElement: documentRoot,
     fullscreenElement: null,
+    hidden: false,
     createElement: (tag) => new Element(tag),
     getElementById: (id) => findElement(documentRoot, id),
     querySelector: (selector) => selector.includes("ytd-watch-metadata") && rowAvailable ? actionRow : null,
-    addEventListener() {}, removeEventListener() {},
+    addEventListener(name, callback) { documentListeners[name] = callback; }, removeEventListener(name) { delete documentListeners[name]; },
     execCommand() { return false; }
   };
-  const window = { addEventListener() {}, removeEventListener() {} }; window.top = window;
+  const windowListeners = {};
+  const window = { addEventListener(name, callback) { windowListeners[name] = callback; }, removeEventListener(name) { delete windowListeners[name]; } }; window.top = window;
   let intervalCallback = null;
   function setInterval(callback) { intervalCallback = callback; return 1; }
   function clearInterval() { intervalCallback = null; }
+  function setTimeout() { return 1; }
+  function clearTimeout() {}
   const location = { href: "https://www.youtube.com/watch?feature=share&v=abc_123-XYZ&t=20" };
   const copied = [];
   const messages = [];
   let copyFails = false;
+  let openFails = false;
   let pauseCopy = false;
   let resolveCopy = null;
   const navigator = { clipboard: { async writeText(value) { if (copyFails) throw new Error("blocked"); copied.push(value); if (pauseCopy) await new Promise((resolve) => { resolveCopy = resolve; }); } } };
-  const chrome = { runtime: { id: "watchwise-test", async sendMessage(message) { messages.push(message); return { ok: true }; } } };
+  const chrome = { runtime: { id: "watchwise-test", async sendMessage(message) { messages.push(message); return { ok: !openFails }; } } };
   function check(value, message) { if (!value) throw new Error(message); }
   const prefillExpected = #{filename == "studio-handoff.js"};
   #{script}
@@ -48,8 +54,9 @@ fixture = <<~JAVASCRIPT
   function host() { return document.getElementById("watchwise-studio-handoff-host"); }
   function parts() { const wrap = host().shadow.children[1]; return { button: wrap.children[0], status: wrap.children[1], manual: wrap.children[2] }; }
   check(host() && messages.length === 0, "watch page did not render a quiet, no-request action");
-  check(parts().manual.children[1].href === "https://aistudio.google.com/prompts/new_chat", "manual fallback does not lead to Studio's new chat");
+  check(parts().manual.children[2].href === "https://aistudio.google.com/prompts/new_chat", "manual fallback does not lead to Studio's new chat");
   if (prefillExpected) check(parts().button.innerHTML.includes("Summarise in Gemini AI Studio"), "requested button label is missing");
+  check(host().shadow.children[0].textContent.includes(".wrap{display:block") && host().shadow.children[0].textContent.includes(".hint{position:fixed") && host().shadow.children[0].textContent.includes(".manual{position:fixed"), "feedback can expand YouTube's action row");
   check(host().parent === actionRow, "button is not in the YouTube action row");
   const firstHost = host(); intervalCallback();
   check(host() === firstHost, "poll duplicated the action");
@@ -63,6 +70,7 @@ fixture = <<~JAVASCRIPT
   check(!copied[0].includes("feature=share") && !copied[0].includes("t=20"), "tracking parameters leaked into prompt");
   check(copied[0] === "Summarise the video with topics and bullets for each - https://www.youtube.com/watch?v=abc_123-XYZ", "copied prompt differs from the requested wording");
   check(messages.length === 1 && messages[0].type === "OPEN_AI_STUDIO", "Studio did not open only after copying");
+  check(parts().manual.hidden && parts().status.textContent === "", "successful handoff left feedback in the action row");
 
   location.href = "https://www.youtube.com/shorts/abc_123-XYZ"; intervalCallback();
   check(!host(), "Short incorrectly shows the action");
@@ -81,7 +89,20 @@ fixture = <<~JAVASCRIPT
   parts().button.listeners.click();
   for (let i = 0; i < 6; i++) await Promise.resolve();
   check(messages.length === (prefillExpected ? 2 : 1), "copy failure did not follow the edition's fallback policy");
-  check(parts().manual.hidden === false && parts().manual.children[0].value.includes("watch?v=second"), "copy failure did not provide manual prompt");
+  if (prefillExpected) check(parts().manual.hidden && parts().status.textContent === "", "successful prefill showed a redundant manual prompt when clipboard failed");
+  else check(parts().manual.hidden === false && parts().manual.children[1].value.includes("watch?v=second"), "copy failure did not provide manual prompt");
+  openFails = true;
+  parts().button.listeners.click();
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  check(!parts().manual.hidden && parts().manual.children[1].value.includes("watch?v=second"), "opening failure lost the manual prompt");
+  documentListeners.visibilitychange();
+  check(parts().manual.hidden && parts().status.textContent === "", "returning to the tab did not reset transient feedback");
+  openFails = true;
+  parts().button.listeners.click();
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  windowListeners.pageshow();
+  check(parts().manual.hidden && parts().status.textContent === "", "page restoration did not reset transient feedback");
+  openFails = false;
   copyFails = false; pauseCopy = true;
   const beforeNavigation = messages.length;
   parts().button.listeners.click();

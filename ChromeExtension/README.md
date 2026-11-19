@@ -29,11 +29,11 @@ Chrome local extension storage is access-isolated from content scripts but is no
 5. Review the HTTPS access disclosure and choose whether to enable local tracking.
 6. Optional: enable Gemini API analysis and save your Gemini API key in Settings. New visible, active public YouTube videos are then analysed automatically unless you turn automatic analysis off. The separate **Summarise in Gemini AI Studio** action on YouTube does not require the key.
 
-### Updating the unpacked build to v0.3.14
+### Updating the unpacked build to v0.3.16
 
 1. Open `chrome://extensions`, find Watchwise and click **Reload** on its card.
 2. Close any open Watchwise side panel, then reopen it from the toolbar icon.
-3. Verify the header reads **v0.3.14**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
+3. Verify the header reads **v0.3.16**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
 4. Reload any already-open YouTube or Netflix video tabs once. This clears an older content-script instance that Chrome may have invalidated during an extension reload.
 
 Version 0.3.9 makes the 15-second goal check-in commit only after the in-page toast confirms it was appended. Goal toasts take priority over an unrelated toast cooldown, work inside container-based fullscreen players, and use a durable pending lease with bounded retry after a transient delivery failure. Direct `<video>` or replaced `<iframe>` fullscreen fails closed because extension DOM may not render there; the pending check-in may retry after fullscreen exit. Unverified v0.3.8 goal state is discarded during this upgrade, so a video whose v0.3.8 toast was actually visible may receive one repeat check-in. This release also removes all Chrome/macOS native banners: the alert toggle now controls in-page nudges and analysis-ready toasts only. The v0.3.7 invalidated-context cleanup, v0.3.6 Netflix title extraction and v0.3.5 eligible-tab recovery remain intact. Chrome cannot retroactively repair a content script orphaned by an older extension reload, so existing affected video tabs still need the one-time reload above.
@@ -50,6 +50,10 @@ Version 0.3.13 uses the exact prompt `Summarise the video with topics and bullet
 
 Version 0.3.14 removes the Analyse tab and its manual Gemini API form. The side panel now has Overview and Settings. Automatic Gemini API analysis remains optional; its latest job and result are available under the collapsed **Latest Gemini API analysis** section in Settings. The YouTube **Summarise in Gemini AI Studio** button continues to work independently.
 
+Version 0.3.15 keeps the Studio button at a fixed size after clicking. Brief progress feedback and the rare manual-copy fallback float outside YouTube's action row. A successful Studio opening clears the feedback even if clipboard copying was blocked; returning to the video also clears stale feedback.
+
+Version 0.3.16 additionally clears stale fallback feedback when Chrome restores a video page from its back-forward cache.
+
 ### On-device AI quality trial
 
 The repository retains a source-only Labs/developer trial page for Chrome's Summarizer and Prompt APIs, using a bundled public English auto-generated transcript from a four-minute YouTube video. It is not linked from the public Watchwise UI and is excluded from the Chrome Web Store package. The trial does not call Gemini API and does not save or change Watchwise analysis jobs or settings. The page does not probe Chrome's local models or load the transcript on page load: choose **Check local AI availability** first. It shows the base Prompt API state and, when the base API is runnable, the configured task state. It enables an action only when the matching task is available, downloadable or downloading. A model-capability/adaptation warning means Chrome's on-device model or configured task is unavailable. This local trial is separate from Watchwise tracking and Gemini analysis, and it never falls back to Gemini. Chrome may still write its own native model-capability warning to DevTools after an explicit check even when Watchwise handles the result; that browser message cannot be suppressed by the extension.
@@ -58,7 +62,7 @@ The repository retains a source-only Labs/developer trial page for Chrome's Summ
 
 If you choose to run one controlled Gemini API request with your own key:
 
-1. Reload the unpacked extension, reopen the side panel and verify **v0.3.14** in the header.
+1. Reload the unpacked extension, reopen the side panel and verify **v0.3.16** in the header.
 2. Turn **Analyse new YouTube videos automatically** on, enable AI consent, end Movie Mode, and confirm `youtube.com` is not excluded.
 3. Save your own Gemini API key in Watchwise.
 4. Play a new public YouTube watch video in an active tab for at least three seconds. Open **Settings → Latest Gemini API analysis** to see its status or result. Requests may use quota.

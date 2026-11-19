@@ -10,7 +10,9 @@
   let button = null;
   let status = null;
   let manual = null;
+  let manualMessage = null;
   let manualText = null;
+  let feedbackTimer = null;
   let currentVideoURL = null;
   let disposed = false;
 
@@ -41,8 +43,30 @@
   }
 
   function removeHost() {
+    clearTimeout(feedbackTimer);
     host?.remove();
-    host = button = status = manual = manualText = null;
+    host = button = status = manual = manualMessage = manualText = null;
+  }
+
+  function clearFeedback() {
+    clearTimeout(feedbackTimer);
+    if (status) status.textContent = "";
+    if (manual) manual.hidden = true;
+  }
+
+  function showStatus(message) {
+    if (!status) return;
+    status.textContent = message;
+    clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => { if (status) status.textContent = ""; }, 5_000);
+  }
+
+  function showManual(prompt, message) {
+    if (!manual || !manualText || !manualMessage) return;
+    clearFeedback();
+    manualText.value = prompt;
+    manualMessage.textContent = message;
+    manual.hidden = false;
   }
 
   function actionTarget() {
@@ -90,16 +114,15 @@
   async function handleClick() {
     const url = canonicalWatchURL(location.href);
     if (!url || disposed || !runtimeAvailable()) { sync(); return; }
+    clearFeedback();
     button.disabled = true;
-    status.textContent = "Copying your prompt…";
+    showStatus("Opening AI Studio…");
     const prompt = studioPrompt(url);
     try {
       if (!(await copyPrompt(prompt))) {
         if (disposed || canonicalWatchURL(location.href) !== url) return;
         if (!host?.isConnected) sync();
-        manual.hidden = false;
-        manualText.value = prompt;
-        status.textContent = "Copy was blocked. Copy the prompt below, then open Studio.";
+        showManual(prompt, "Copy was blocked. Select and copy this prompt, then open Studio.");
         manualText.focus();
         manualText.select();
         return;
@@ -111,19 +134,14 @@
       if (disposed || canonicalWatchURL(location.href) !== url) return;
       if (!host?.isConnected) sync();
       if (!opened) {
-        manual.hidden = false;
-        manualText.value = prompt;
-        status.textContent = "Prompt copied. Open Studio below and paste it.";
+        showManual(prompt, "Studio could not open. The prompt was copied; paste it into Studio.");
       } else {
-        manual.hidden = true;
-        status.textContent = "Prompt copied. Paste and send it in Studio.";
+        clearFeedback();
       }
     } catch {
       if (!disposed && canonicalWatchURL(location.href) === url) {
         if (!host?.isConnected) sync();
-        manual.hidden = false;
-        manualText.value = prompt;
-        status.textContent = "Copy was blocked. Copy the prompt below, then open Studio.";
+        showManual(prompt, "Copy was blocked. Select and copy this prompt, then open Studio.");
       }
     } finally {
       if (button) button.disabled = false;
@@ -139,12 +157,12 @@
     const style = document.createElement("style");
     style.textContent = `
       :host{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-      .wrap{display:grid;gap:6px;max-width:320px}
-      button{cursor:pointer;border:1px solid rgba(232,209,179,.32);border-radius:999px;padding:10px 14px;background:rgba(37,36,32,.95);box-shadow:0 8px 24px rgba(17,15,12,.20);backdrop-filter:blur(14px);color:#faf7f1;font:650 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:left}
+      .wrap{display:block;max-width:320px}
+      button{cursor:pointer;border:1px solid rgba(232,209,179,.32);border-radius:999px;padding:10px 14px;background:rgba(37,36,32,.95);box-shadow:0 8px 24px rgba(17,15,12,.20);backdrop-filter:blur(14px);color:#faf7f1;font:650 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:left;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
       button:hover{background:#3a3027;border-color:#c69868}button:disabled{opacity:.7;cursor:wait}
       button:focus-visible,a:focus-visible,textarea:focus-visible{outline:2px solid #d4a16f;outline-offset:3px}
-      .spark{color:#d4a16f;margin-right:7px}.hint{font:500 12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f4eee3;background:rgba(37,36,32,.88);border-radius:8px;padding:5px 8px;width:max-content;max-width:100%}
-      .manual{display:grid;gap:8px;background:#faf9f6;border:1px solid #dcd6cb;border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(17,15,12,.18)}.manual[hidden],.hint:empty{display:none}
+      .spark{color:#d4a16f;margin-right:7px}.hint{position:fixed;right:18px;bottom:18px;z-index:2147483646;box-sizing:border-box;max-width:min(320px,calc(100vw - 36px));padding:9px 12px;font:500 12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f4eee3;background:rgba(37,36,32,.94);border-radius:9px;box-shadow:0 8px 24px rgba(17,15,12,.20)}
+      .manual{position:fixed;right:18px;bottom:18px;z-index:2147483646;box-sizing:border-box;display:grid;gap:8px;width:min(320px,calc(100vw - 36px));background:#faf9f6;border:1px solid #dcd6cb;border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(17,15,12,.18);color:#252420;font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.manual p{margin:0}.manual[hidden],.hint:empty{display:none}
       textarea{box-sizing:border-box;width:290px;max-width:100%;height:92px;resize:vertical;border:1px solid #b7aa9b;border-radius:7px;padding:8px;background:#fff;color:#252420;font:12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       a{color:#705037;font:700 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-decoration:none}a:hover{text-decoration:underline}
       @media(max-width:480px){.wrap{max-width:calc(100vw - 36px)}}
@@ -164,6 +182,7 @@
     manual = document.createElement("div");
     manual.className = "manual";
     manual.hidden = true;
+    manualMessage = document.createElement("p");
     manualText = document.createElement("textarea");
     manualText.readOnly = true;
     manualText.setAttribute("aria-label", "Studio prompt to copy manually");
@@ -172,7 +191,12 @@
     open.target = "_blank";
     open.rel = "noopener noreferrer";
     open.textContent = "Open AI Studio ↗";
-    manual.append(manualText, open);
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "manual-dismiss";
+    dismiss.textContent = "Dismiss";
+    dismiss.addEventListener("click", clearFeedback);
+    manual.append(manualMessage, manualText, open, dismiss);
     wrap.append(button, status, manual);
     shadow.append(style, wrap);
     placeHost();
@@ -195,16 +219,20 @@
     removeHost();
     document.removeEventListener("yt-navigate-finish", sync);
     document.removeEventListener("fullscreenchange", sync);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     window.removeEventListener("popstate", sync);
-    window.removeEventListener("pageshow", sync);
+    window.removeEventListener("pageshow", onPageShow);
     if (globalThis[CONTROLLER_KEY]?.dispose === dispose) delete globalThis[CONTROLLER_KEY];
   }
 
   const timer = setInterval(sync, 1_500);
+  function onVisibilityChange() { if (!document.hidden) clearFeedback(); }
+  function onPageShow() { clearFeedback(); sync(); }
   document.addEventListener("yt-navigate-finish", sync);
   document.addEventListener("fullscreenchange", sync);
+  document.addEventListener("visibilitychange", onVisibilityChange);
   window.addEventListener("popstate", sync);
-  window.addEventListener("pageshow", sync);
+  window.addEventListener("pageshow", onPageShow);
   globalThis[CONTROLLER_KEY] = { dispose };
   sync();
 })();

@@ -26,7 +26,7 @@ def assert(condition, message)
 end
 
 assert(manifest["manifest_version"] == 3, "Manifest V3 required")
-assert(manifest["version"] == "0.3.14", "In-place unpacked release must use extension version 0.3.14")
+assert(manifest["version"] == "0.3.16", "In-place unpacked release must use extension version 0.3.16")
 assert(manifest.fetch("content_scripts").any? { |entry| entry["js"] == ["studio-handoff.js"] && entry["all_frames"] == false }, "YouTube Studio handoff is not installed in the top frame")
 assert(manifest.fetch("content_scripts").any? { |entry| entry["matches"] == ["https://aistudio.google.com/prompts/*"] && entry["js"] == ["studio-prefill.js"] && entry["all_frames"] == false }, "Studio prefill must be limited to the top-frame composer")
 assert(background.include?('const STUDIO_URL = "https://aistudio.google.com/prompts/new_chat"') && background.include?('chrome.tabs.create({ url: STUDIO_URL'), "Studio handoff does not open the prompt page")
@@ -271,7 +271,7 @@ assert(sidepanel_js.include?("if (job && !shouldAcceptAnalysisJobUpdate(rendered
 assert(sidepanel_js.match?(/ANALYSIS_JOB_UPDATED.*?invalidateFullStateRequests\(\);.*?renderJob/m), "Analysis broadcasts do not invalidate older dashboard reads")
 assert(sidepanel_js.include?("title.title = fullTitle;"), "Full video title tooltip is missing")
 assert(sidepanel_css.include?("-webkit-line-clamp:2") && sidepanel_css.include?("overflow-wrap:anywhere"), "Video titles are not readable over two lines")
-assert(readme.include?("Updating the unpacked build to v0.3.14") && readme.include?("header reads **v0.3.14**"), "Reload-unpacked/version verification guidance is missing")
+assert(readme.include?("Updating the unpacked build to v0.3.16") && readme.include?("header reads **v0.3.16**"), "Reload-unpacked/version verification guidance is missing")
 assert(readme.include?("one-time reload") && readme.include?("cannot retroactively repair"), "Existing orphaned content-script reload limitation is undocumented")
 assert(nano_html.include?("id=\"checkAvailability\"") && nano_html.include?("id=\"summarize\" disabled") && nano_html.include?("id=\"assess\" disabled"), "Nano capability checks are not explicitly user-initiated")
 assert(!nano_js.include?("await Promise.all([\n  checkAvailability") && nano_js.include?("#checkAvailability") && nano_js.include?("LanguageModel.availability()") && nano_js.include?("LanguageModel.availability(promptOptions)"), "Nano availability flow does not show base and configured user-initiated checks")
