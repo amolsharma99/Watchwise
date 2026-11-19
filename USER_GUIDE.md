@@ -1,59 +1,50 @@
 # Watchwise user guide
 
-Watchwise is a Chrome extension for noticing and reducing passive video watching. It runs in Chrome; there is no Mac app or companion program to install. This guide shows the current public-release interface using **demonstration viewing data**, not a real person's history.
+Watchwise is a Chrome extension, with no Mac app to install. For the public, local-only edition, start with the [Store edition guide](store/USER_GUIDE.md). This page covers the **experimental unpacked build** in [`ChromeExtension`](ChromeExtension), which adds optional Gemini features. The two editions store data separately and should not be enabled together.
 
-## Start here
+## Set up the experimental build
 
-1. Install Watchwise from the Chrome Web Store once the listing is published, then click its toolbar icon to open the side panel.
-2. Read the site-access disclosure. Turn on **Track visible videos** if you want local viewing insights. Tracking starts only after this choice.
-3. Turn on **In-page alerts** if you want gentle nudges. They appear inside the video page, not as macOS banners.
-4. Watch an ordinary HTML5 video in an active Chrome tab. The Overview fills in as you watch. Pin the toolbar icon if you want quicker access.
+1. Open `chrome://extensions`, turn on **Developer mode**, and choose **Load unpacked**.
+2. Select the repository's `ChromeExtension` folder. Click the Watchwise toolbar icon to open the side panel.
+3. Read the HTTPS site-access disclosure. Enable local tracking if you want viewing insights; enable **In-page alerts** if you want nudges. Both can be turned off later.
+4. After updating source files, click **Reload** on the Watchwise card and refresh already-open video tabs. Check the version in the side-panel header against [`ChromeExtension/manifest.json`](ChromeExtension/manifest.json).
 
-![Demonstration of the Watchwise Overview with active time, starts, and weekly context](docs/screenshots/01-overview.png)
+The side panel has **Overview** and **Settings**. Overview shows active watching, meaningful video starts, weekly context, Top sites, and a Video breakdown with title, site, URL, and minutes in descending order. A start requires three seconds of real playback progress. Watchwise counts visible, active HTML5 video on HTTPS sites; some protected or custom players may not be detectable.
 
-## Understand your time
+![Demonstration Overview with synthetic time and start totals](store/screenshots/01-overview.png)
 
-**Active watching** counts time when an eligible video is visibly playing in the active Chrome tab and window. A **video started** count appears only after at least three seconds of real playback progress; a seek jump or a player loading is not a start. Watchwise uses this rule to avoid inflated counts from previews and player replacements.
+## In-page check-ins
 
-The Overview shows today's active minutes and starts, a week summary, and **Top sites**. **Video breakdown** lists saved video titles, links, sites, and minutes, longest watched first. Switch its **Today / Week** control to compare periods. If two videos play at once, Watchwise shares overlapping time among them so breakdown rows add up to the overall active time.
+With alerts on, a translucent goal check-in can appear after about 15 seconds of actual visible playback. Seeking ahead does not count as watched time. Messages vary with the site, title, and recent viewing pattern, and the goal check-in is limited to once per video identity in 24 hours with a short gap between interruptions. Movie Mode, snooze, quiet hours, site exclusions, or switching alerts off will silence them. Movie Mode keeps tracking on.
 
-![Demonstration of Top sites and Video breakdown using example video titles and minutes](docs/screenshots/02-breakdown.png)
+![Demonstration of an in-page goal check-in](store/screenshots/03-goal-checkin.png)
 
-Tracking works with detectable HTML5 video on HTTPS websites, including YouTube watch pages and Shorts, Netflix, and other sites that expose a supported player. Some DRM, canvas, custom, or inaccessible embedded players cannot be tracked. YouTube homepage autoplay previews without a canonical video ID are excluded. Titles may be generic when a site does not expose reliable metadata. Watchwise reads a narrow Netflix player-title metadata element on `/watch/` pages when ordinary metadata is generic.
+## Summarise a YouTube video in AI Studio
 
-## Get a gentle check-in
+On a standard YouTube watch page, click **Summarise in Gemini AI Studio** near the video actions. Watchwise opens a new AI Studio chat with this prompt prepared for you:
 
-With In-page alerts on, Watchwise can show **“Hope you’re clear on your goal for watching this video.”** after about 15 seconds of actual, visible playback. Skipping ahead does not count toward the 15 seconds; watching after the seek does. The check-in is at most once per video identity for 24 hours, with a short gap between nudges. Other nudges can suggest a pause or a useful skip point when Watchwise has enough context.
+```text
+Summarise the video with topics and bullets for each - {video URL}
+```
 
-![Demonstration of the translucent Watchwise goal check-in inside a video page](docs/screenshots/03-goal-checkin.png)
+Review and send it in Studio yourself. The button excludes Shorts, feeds, and embeds. It does not require a Gemini API key in Watchwise. If Studio cannot open, a small manual-copy card appears outside YouTube's action row; dismiss it or copy the prompt and open Studio yourself. Returning to the video clears temporary feedback. AI Studio's response stays in Studio and is not imported into Watchwise.
 
-For uninterrupted watching, use **Movie Mode · 2h**, **Snooze · 30m**, quiet hours, or the In-page alerts switch. You can also exclude specific sites. These controls silence nudges; Movie Mode and exclusions also pause automatic AI analysis. Tracking continues during Movie Mode unless you turn tracking off.
+## Optional automatic Gemini API analysis
 
-![Demonstration of the daily target, Movie Mode, snooze, and quiet hours controls](docs/screenshots/06-interruption-controls.png)
+This is separate from the AI Studio button. In **Settings**, enable **Allow Gemini API analysis**, save your own Gemini API key, and leave **Analyse new YouTube videos automatically** on. After meaningful, visible playback of a new public YouTube watch video, Watchwise queues an asynchronous request. Open **Settings → Latest Gemini API analysis** to see the status or result. Turn the automatic switch off whenever you do not want new requests; Movie Mode and excluded sites also pause automatic analysis.
 
-## Analyse a public YouTube video (optional)
+The result may include a summary, key moments, possible skips, evidence signals, and a cautious information-value verdict. It is an AI interpretation, not an independent fact check. Availability depends on Google's service, the video's accessibility, and your API quota or billing. Each request may consume paid quota. Watchwise keeps your key in Chrome extension local storage; review the [experimental privacy policy](PRIVACY.md) before enabling this feature. The public Store edition has no Gemini API integration or key field.
 
-Watchwise can ask Google's Gemini API for a quick take, key moments, possible skips, evidence signals, and a cautious information-value verdict. This is **not an external fact-check** and may be wrong or incomplete. The feature supports public YouTube URLs, not Netflix or arbitrary website videos.
+## Data and troubleshooting
 
-To use it, open **Settings**, turn on **Allow Gemini analysis**, and save your own Gemini API key. With both in place, Watchwise automatically starts analysis for a new public YouTube video after meaningful active playback. **Analyse new YouTube videos automatically** is on by default after AI setup; turn it off if you want manual analysis only. In the **Analyse** tab, you can paste a public YouTube URL and choose **Analyse with Gemini**. A request is asynchronous; the result appears in the side panel when ready, and a brief in-page toast can appear in the source tab.
+**Export JSON** downloads viewing and analysis records with safe settings, excluding your API key. **Delete history** removes those records but keeps settings and the key; use **Clear saved key** separately. The experimental build retains records for up to 180 days. The public Store edition uses a separate encrypted local database and has its own export and deletion controls.
 
-Each new analysis may consume paid Gemini API quota or incur charges on your Google account. A saved key does not guarantee available quota. Under Google's terms, unpaid API inputs and outputs may be used for product improvement and human review. A private, restricted, unavailable, or unsupported video can fail. If you close the source tab, reopen Watchwise to see the saved result; no macOS banner is sent.
+- **No new time or starts:** Keep Chrome frontmost and the video visible, check that tracking is on, and allow at least three seconds of real playback. Refresh tabs that were open before an extension update.
+- **No check-in:** Check In-page alerts, Movie Mode, snooze, quiet hours, and site exclusions. After a seek, allow about 15 seconds of continued playback. Some fullscreen players cannot display extension overlays.
+- **AI Studio button did not open a chat:** Use the manual-copy card, then try Studio directly. The video must be a standard public YouTube watch URL.
+- **Gemini API analysis is queued or fails:** Check **Settings → Latest Gemini API analysis**, your consent and key, public video access, connection, and quota. Do not send your key or raw response in a support report.
+- **Generic title:** The site may not provide reliable video metadata. Watchwise does not guess a title from unrelated page text.
 
-![Demonstration of the Analyse tab and its optional Gemini controls; no model result is fabricated](docs/screenshots/04-analyse.png)
+For help, [open a GitHub issue](https://github.com/amolsharma99/Watchwise/issues) with a public or synthetic example. Do not attach private viewing history or credentials.
 
-## Control and remove your data
-
-**Settings** holds the tracking and alert switches, automatic analysis, daily target, interruption controls, site exclusions, and Gemini key controls. **Export JSON** downloads your local viewing and analysis records with safe settings; it excludes the API key. Watchwise also prunes playback events and completed analysis records after 180 days. **Delete history** removes local viewing events and analysis records sooner. It does not clear your saved API key or settings, so use **Clear saved key** separately. Turning tracking off stops new records but keeps existing history until deletion or automatic pruning.
-
-![Demonstration of Watchwise Settings with in-page alerts, Movie Mode, and privacy controls](docs/screenshots/05-settings.png)
-
-The [privacy policy](PRIVACY.md) describes data handling and the optional transfer to Google. Watchwise has no developer-operated analytics server and no account. Its broad HTTPS access is needed to detect eligible video across websites and embedded frames; tracking stays off until you opt in.
-
-## If something looks wrong
-
-- **Time or starts did not change:** Keep Chrome frontmost and the video visible for at least a few seconds of actual playback. Reload an already-open video tab after an extension update. Check that tracking is on and the site is not excluded.
-- **No in-page check-in:** Check In-page alerts, Movie Mode, snooze, and quiet hours. Allow about 20–25 seconds after a seek. Fullscreen players that do not render extension overlays may show the check-in only after leaving fullscreen.
-- **Gemini is queued or fails:** Open Analyse and refresh after processing. Check the key, AI consent, public URL, connection, and available Gemini API quota. Do not repeatedly submit the same video. Share only Watchwise's safe status text in a support report—never your key or raw request.
-- **Title is generic:** The site may not expose reliable metadata. Watchwise avoids guessing from unrelated page text.
-
-For support, open a [Watchwise GitHub issue](https://github.com/amolsharma99/Watchwise/issues) using a public or synthetic video example. Do not attach private viewing history, an API key, or personal browser data.
+<sub>Images above use synthetic data from the older Store demo capture. The current experimental build uses the ink and caramel design; no Gemini result is fabricated here.</sub>
