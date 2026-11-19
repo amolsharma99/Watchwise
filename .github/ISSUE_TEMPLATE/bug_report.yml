@@ -1,0 +1,50 @@
+name: Bug report
+description: Tell us what went wrong in Watchwise
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Use a public or synthetic example. Please remove private video URLs, viewing history, API keys, and personal account details from screenshots and logs."
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened?
+      placeholder: "Tell us what Watchwise showed or did."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "Include a public example URL only if it helps."
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Which build are you using?
+      options:
+        - Submitted Store edition
+        - Local-only source candidate
+        - Experimental Gemini build
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version shown in Watchwise (if known)
+      placeholder: "For example, 0.4.0"
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have removed private URLs, viewing history, API keys, and personal account information.
+          required: true

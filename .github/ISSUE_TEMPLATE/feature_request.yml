@@ -1,0 +1,44 @@
+name: Feature idea
+description: Suggest a better way to watch with intent
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for helping shape Watchwise. Describe the viewing problem first. Please use only public or synthetic examples and remove private URLs, history, screenshots, and API keys."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What viewing problem are you trying to solve?
+      placeholder: "For example, I often lose track of time when…"
+    validations:
+      required: true
+  - type: textarea
+    id: desired_behavior
+    attributes:
+      label: What would you like Watchwise to do?
+      placeholder: "Describe the experience that would help you make a better choice."
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Which build is this about?
+      options:
+        - Submitted Store edition
+        - Local-only source candidate
+        - Experimental Gemini build
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Public or synthetic example (optional)
+      description: A public video or website can help us understand the use case. Do not include private history or credentials.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have removed private URLs, viewing history, API keys, and personal account information.
+          required: true
