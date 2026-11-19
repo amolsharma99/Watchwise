@@ -4,15 +4,16 @@
 
 **Watch with intent.** Watchwise is a Chrome extension that shows where your video time goes and gives you a gentle moment to decide whether to stay. One extension is all you need; there is no Mac app or companion service.
 
-[Try Watchwise](#try-watchwise) · [Suggest a feature](https://github.com/amolsharma99/Watchwise/issues/new?template=feature_request.yml) · [Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/amolsharma99/Watchwise/issues/new)
+[Try Watchwise](#try-watchwise) · [Suggest a feature](https://github.com/amolsharma99/Watchwise/issues/new?template=feature_request.yml) · [Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/amolsharma99/Watchwise/issues/new?template=bug_report.yml)
 
 > **Release status:** The submitted Chrome Web Store package is local-only v0.4.0. The newer v0.4.1 source and experimental v0.3.16 build have additional Studio features; neither is the submitted package. This repository does not yet include a verified public Store install link.
 
 ## Try Watchwise
 
-1. In Chrome, open `chrome://extensions`, turn on **Developer mode**, and choose **Load unpacked**.
-2. Select [`ChromeExtension/store-local`](ChromeExtension/store-local) for the local-only source build. Click Watchwise's toolbar icon to open the side panel.
-3. Read the site-access disclosure, then choose whether to turn on local tracking and in-page alerts. Watch an ordinary video in the active Chrome window to see your insights grow.
+1. [Download the source ZIP](https://github.com/amolsharma99/Watchwise/archive/refs/heads/main.zip) and unzip it, or clone the repository with `git clone https://github.com/amolsharma99/Watchwise.git`.
+2. In Chrome, open `chrome://extensions`, turn on **Developer mode**, and choose **Load unpacked**.
+3. Select the downloaded [`ChromeExtension/store-local`](ChromeExtension/store-local) folder for the local-only source build. Click Watchwise's toolbar icon to open the side panel.
+4. Read the site-access disclosure, then choose whether to turn on local tracking and in-page alerts. Watch an ordinary video in the active Chrome window to see your insights grow.
 
 This source folder is the **unsubmitted v0.4.1 candidate**. The [Store user guide](store/USER_GUIDE.md) and [Store privacy policy](store/PRIVACY.md) describe the submitted v0.4.0 package. See [which build is which](#which-build-is-which) before trying the experimental Gemini API version.
 
@@ -80,7 +81,7 @@ Chrome 116 or later is required. Tracking works with detectable HTML5 video on H
 
 ## Ideas and collaboration
 
-Watchwise is still growing. If a video habit, website, insight, or nudge could work better, [suggest a feature](https://github.com/amolsharma99/Watchwise/issues/new?template=feature_request.yml). Tell us the viewing problem, what you hoped Watchwise would do, and a public or synthetic example if it helps. For something broken, [open a bug report](https://github.com/amolsharma99/Watchwise/issues/new). Please remove private video URLs, viewing history, and API keys from issues and screenshots.
+Watchwise is still growing. If a video habit, website, insight, or nudge could work better, [suggest a feature](https://github.com/amolsharma99/Watchwise/issues/new?template=feature_request.yml). Tell us the viewing problem, what you hoped Watchwise would do, and a public or synthetic example if it helps. For something broken, [open a bug report](https://github.com/amolsharma99/Watchwise/issues/new?template=bug_report.yml). Please remove private video URLs, viewing history, and API keys from issues and screenshots.
 
 Want to help build it? Read [CONTRIBUTING.md](CONTRIBUTING.md) and open an issue before a larger change so the behavior and edition are clear. GitHub Issues is our shared place for requests and collaboration.
 

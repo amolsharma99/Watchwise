@@ -4,7 +4,7 @@ title: "[Idea] "
 body:
   - type: markdown
     attributes:
-      value: "Thanks for helping shape Watchwise. Describe the viewing problem first. Please use only public or synthetic examples and remove private URLs, history, screenshots, and API keys."
+      value: "Thanks for helping shape Watchwise. Describe the viewing problem first. Please use only public or synthetic examples, and remove private URLs, history, account details, and API keys from text and screenshots."
   - type: textarea
     id: problem
     attributes:
