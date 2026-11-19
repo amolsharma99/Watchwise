@@ -1,6 +1,6 @@
 # Watchwise Store edition user guide
 
-Watchwise helps you notice and reduce passive video watching in Chrome. The Store edition is **local-only**: there is no Mac app, Watchwise account, Gemini analysis, or API key. Images below use clearly labelled demonstration data.
+Watchwise helps you notice and reduce passive video watching in Chrome. This guide describes the **submitted local-only v0.4.0 Store package**: there is no Mac app, Watchwise account, Gemini analysis, AI Studio button, or API key. The unsubmitted v0.4.1 source candidate adds a user-initiated Studio shortcut, explained below. Images use demonstration data.
 
 ## Get started
 
@@ -34,6 +34,10 @@ Use **Movie Mode · 2h**, **Snooze · 30m**, quiet hours, site exclusions, or th
 ![Demonstration of the Store edition Settings tab with tracking and in-page alert switches](screenshots/04-settings.png)
 
 ![Demonstration of daily target, Movie Mode, snooze, and quiet hours](screenshots/05-interruption-controls.png)
+
+## AI Studio shortcut in the unsubmitted source candidate
+
+The current [`ChromeExtension/store-local`](../ChromeExtension/store-local) source candidate is v0.4.1. On a standard YouTube watch page, its **Ask in AI Studio** button copies `Summarise the video with topics and bullets for each - {url}` with that video's public URL, then opens a new AI Studio chat. You decide whether to paste and send the prompt. Watchwise does not read the AI Studio response, use an API key, or call a remote model. The button does not appear on Shorts, feeds, or embeds. It is **not part of the submitted v0.4.0 Store package**.
 
 ## Privacy, export, and deletion
 
