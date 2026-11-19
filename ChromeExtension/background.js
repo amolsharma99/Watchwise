@@ -40,10 +40,6 @@ import {
 
 const SETTINGS_KEY = "watchwiseSettings";
 const API_KEY = "geminiApiKey";
-const STUDIO_URL = "https://aistudio.google.com/prompts/new_chat";
-const STUDIO_PROMPT_PREFIX = "watchwiseStudioPrompt:";
-const STUDIO_PROMPT_ALARM_PREFIX = "watchwiseStudioPromptExpiry:";
-const STUDIO_PROMPT_TTL_MS = 2 * 60 * 1000;
 const ONBOARDING_KEY = "onboardingComplete";
 const NUDGE_STATE_KEY = "nudgeState";
 const GOAL_CHECK_STATE_KEY = "goalCheckInState";
@@ -86,32 +82,6 @@ async function localRemove(keys) { await protectLocalStorage(); return chrome.st
 
 function isExtensionPage(sender) {
   return sender?.id === chrome.runtime.id && typeof sender.url === "string" && sender.url.startsWith(chrome.runtime.getURL(""));
-}
-
-function standardYouTubeWatchID(input) {
-  try {
-    const url = new URL(input);
-    if (url.protocol !== "https:" || !["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname.toLowerCase()) || url.pathname !== "/watch") return null;
-    const videoIDs = url.searchParams.getAll("v");
-    return videoIDs.length === 1 && /^[A-Za-z0-9_-]{1,64}$/.test(videoIDs[0]) ? videoIDs[0] : null;
-  } catch { return null; }
-}
-
-function studioPromptForVideo(videoID) {
-  const url = `https://www.youtube.com/watch?v=${videoID}`;
-  return `Summarise the video with topics and bullets for each - ${url}`;
-}
-
-function studioPromptKey(tabID) { return `${STUDIO_PROMPT_PREFIX}${tabID}`; }
-function studioPromptAlarm(tabID) { return `${STUDIO_PROMPT_ALARM_PREFIX}${tabID}`; }
-
-function isStudioComposerSender(sender) {
-  if (sender?.id !== chrome.runtime.id || !Number.isInteger(sender?.tab?.id) || sender.frameId !== 0) return false;
-  try {
-    const frame = new URL(sender.url);
-    const tab = new URL(sender.tab.url);
-    return [frame, tab].every((url) => url.protocol === "https:" && url.hostname === "aistudio.google.com" && url.pathname === "/prompts/new_chat");
-  } catch { return false; }
 }
 
 function publicError(error) {
@@ -945,36 +915,6 @@ const initializationPromise = setInitialState();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
-    if (message?.type === "OPEN_AI_STUDIO") {
-      const topFrame = sender?.id === chrome.runtime.id && Number.isInteger(sender?.tab?.id) && sender.frameId === 0;
-      const frameVideoID = standardYouTubeWatchID(sender?.url);
-      const tabVideoID = standardYouTubeWatchID(sender?.tab?.url);
-      if (!topFrame || !frameVideoID || frameVideoID !== tabVideoID) throw new TypeError("Current YouTube watch page required");
-      const tab = await chrome.tabs.create({ url: STUDIO_URL, openerTabId: sender.tab.id });
-      if (!Number.isInteger(tab?.id)) throw new Error("Studio tab did not open");
-      await chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
-      await chrome.storage.session.set({ [studioPromptKey(tab.id)]: {
-        prompt: studioPromptForVideo(frameVideoID),
-        token: crypto.randomUUID(),
-        expiresAtMs: Date.now() + STUDIO_PROMPT_TTL_MS
-      } });
-      void chrome.alarms.create(studioPromptAlarm(tab.id), { when: Date.now() + STUDIO_PROMPT_TTL_MS }).catch(() => {});
-      return { ok: true };
-    }
-    if (message?.type === "GET_STUDIO_PROMPT" || message?.type === "STUDIO_PROMPT_HANDLED") {
-      if (!isStudioComposerSender(sender)) throw new TypeError("Studio composer sender required");
-      const key = studioPromptKey(sender.tab.id);
-      const entry = (await chrome.storage.session.get(key))[key];
-      if (!entry || entry.expiresAtMs <= Date.now()) {
-        if (entry) await chrome.storage.session.remove(key);
-        return { ok: true, pending: false };
-      }
-      if (message.type === "GET_STUDIO_PROMPT") return { ok: true, pending: true, prompt: entry.prompt, token: entry.token };
-      if (message.token !== entry.token) throw new TypeError("Invalid Studio handoff token");
-      await chrome.storage.session.remove(key);
-      void chrome.alarms.clear(studioPromptAlarm(sender.tab.id)).catch(() => {});
-      return { ok: true };
-    }
     await initializationPromise;
     if (message?.type === "DASHBOARD_UPDATED") return { ok: true };
     if (message?.type === "CONTENT_HEALTH_CHECK") return {
@@ -1008,10 +948,6 @@ chrome.runtime.onStartup.addListener(() => {
     await resumeAnalysisJobs();
   }).catch(() => {});
 });
-chrome.tabs.onRemoved.addListener((tabID) => {
-  void chrome.storage.session.remove(studioPromptKey(tabID)).catch(() => {});
-  void chrome.alarms.clear(studioPromptAlarm(tabID)).catch(() => {});
-});
 chrome.tabs.onActivated.addListener(({ tabId }) => {
   void initializationPromise.then(async () => {
     const tab = await chrome.tabs.get(tabId);
@@ -1021,11 +957,6 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
   }).catch(() => {});
 });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name.startsWith(STUDIO_PROMPT_ALARM_PREFIX)) {
-    const tabID = Number(alarm.name.slice(STUDIO_PROMPT_ALARM_PREFIX.length));
-    if (Number.isInteger(tabID)) void chrome.storage.session.remove(studioPromptKey(tabID)).catch(() => {});
-    return;
-  }
   if (alarm.name === ANALYSIS_ALARM) void resumeAnalysisJobs();
   if (alarm.name === INSIGHTS_ALARM) void announceDashboardUpdated();
   if (alarm.name === PRUNE_ALARM) void pruneRetainedData(Date.now() - RETENTION_MS).catch(() => {});

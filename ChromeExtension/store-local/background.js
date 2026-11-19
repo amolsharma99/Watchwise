@@ -62,15 +62,6 @@ function isExtensionPage(sender) {
   return sender?.id === chrome.runtime.id && typeof sender.url === "string" && sender.url.startsWith(chrome.runtime.getURL(""));
 }
 
-function standardYouTubeWatchID(input) {
-  try {
-    const url = new URL(input);
-    if (url.protocol !== "https:" || !["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname.toLowerCase()) || url.pathname !== "/watch") return null;
-    const videoIDs = url.searchParams.getAll("v");
-    return videoIDs.length === 1 && /^[A-Za-z0-9_-]{1,64}$/.test(videoIDs[0]) ? videoIDs[0] : null;
-  } catch { return null; }
-}
-
 function publicError(error) {
   if (error?.name === "ValidationError") return "That value is not valid or allowed.";
   return "Watchwise could not complete that action.";
@@ -543,14 +534,6 @@ async function resetSecureStorage() {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
-    if (message?.type === "OPEN_AI_STUDIO") {
-      const topFrame = sender?.id === chrome.runtime.id && Number.isInteger(sender?.tab?.id) && sender.frameId === 0;
-      const frameVideoID = standardYouTubeWatchID(sender?.url);
-      const tabVideoID = standardYouTubeWatchID(sender?.tab?.url);
-      if (!topFrame || !frameVideoID || frameVideoID !== tabVideoID) throw new TypeError("Current YouTube watch page required");
-      await chrome.tabs.create({ url: "https://aistudio.google.com/prompts/new_chat", openerTabId: sender.tab.id });
-      return { ok: true };
-    }
     if (message?.type === "RESET_SECURE_STORAGE") {
       if (!isExtensionPage(sender)) throw new TypeError("privileged sender required");
       await resetSecureStorage();

@@ -15,8 +15,8 @@ Describe what happened, what you expected, and a **public or synthetic** example
 | Build | Source | Scope |
 | --- | --- | --- |
 | Submitted Store package | Release ZIP described in [`store/USER_GUIDE.md`](store/USER_GUIDE.md) | Local tracking and nudges; no AI Studio shortcut or Gemini API |
-| Current local-only source | [`ChromeExtension/store-local`](ChromeExtension/store-local) | Local features and the click-to-copy AI Studio handoff; not yet uploaded |
-| Experimental unpacked build | [`ChromeExtension`](ChromeExtension) | Studio prompt preparation and optional Gemini API analysis |
+| Current local-only source | [`ChromeExtension/store-local`](ChromeExtension/store-local) | Local tracking, insights, and nudges; not yet uploaded |
+| Experimental unpacked build | [`ChromeExtension`](ChromeExtension) | Local features and optional Gemini API analysis |
 
 The older Swift Mac app and browser bridge are legacy source. New Chrome-extension work generally belongs in one of the two `ChromeExtension` folders above. If a shared behavior changes, check both editions and keep the submitted Store disclosures accurate until a new package is released.
 

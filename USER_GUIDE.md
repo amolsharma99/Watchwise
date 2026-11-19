@@ -19,19 +19,9 @@ With alerts on, a translucent goal check-in can appear after about 15 seconds of
 
 ![Demonstration of an in-page goal check-in](store/screenshots/03-goal-checkin.png)
 
-## Summarise a YouTube video in AI Studio
-
-On a standard YouTube watch page, click **Summarise in Gemini AI Studio** near the video actions. Watchwise opens a new AI Studio chat with this prompt prepared for you:
-
-```text
-Summarise the video with topics and bullets for each - {video URL}
-```
-
-Review and send it in Studio yourself. The button excludes Shorts, feeds, and embeds. It does not require a Gemini API key in Watchwise. If Studio cannot open, a small manual-copy card appears outside YouTube's action row; dismiss it or copy the prompt and open Studio yourself. Returning to the video clears temporary feedback. AI Studio's response stays in Studio and is not imported into Watchwise.
-
 ## Optional automatic Gemini API analysis
 
-This is separate from the AI Studio button. In **Settings**, enable **Allow Gemini API analysis**, save your own Gemini API key, and leave **Analyse new YouTube videos automatically** on. After meaningful, visible playback of a new public YouTube watch video, Watchwise queues an asynchronous request. Open **Settings → Latest Gemini API analysis** to see the status or result. Turn the automatic switch off whenever you do not want new requests; Movie Mode and excluded sites also pause automatic analysis.
+In **Settings**, enable **Allow Gemini API analysis**, save your own Gemini API key, and leave **Analyse new YouTube videos automatically** on. After meaningful, visible playback of a new public YouTube watch video, Watchwise queues an asynchronous request. Open **Settings → Latest Gemini API analysis** to see the status or result. Turn the automatic switch off whenever you do not want new requests; Movie Mode and excluded sites also pause automatic analysis.
 
 The result may include a summary, key moments, possible skips, evidence signals, and a cautious information-value verdict. It is an AI interpretation, not an independent fact check. Availability depends on Google's service, the video's accessibility, and your API quota or billing. Each request may consume paid quota. Watchwise keeps your key in Chrome extension local storage; review the [experimental privacy policy](PRIVACY.md) before enabling this feature. The public Store edition has no Gemini API integration or key field.
 
@@ -41,7 +31,6 @@ The result may include a summary, key moments, possible skips, evidence signals,
 
 - **No new time or starts:** Keep Chrome frontmost and the video visible, check that tracking is on, and allow at least three seconds of real playback. Refresh tabs that were open before an extension update.
 - **No check-in:** Check In-page alerts, Movie Mode, snooze, quiet hours, and site exclusions. After a seek, allow about 15 seconds of continued playback. Some fullscreen players cannot display extension overlays.
-- **AI Studio button did not open a chat:** Use the manual-copy card, then try Studio directly. The video must be a standard public YouTube watch URL.
 - **Gemini API analysis is queued or fails:** Check **Settings → Latest Gemini API analysis**, your consent and key, public video access, connection, and quota. Do not send your key or raw response in a support report.
 - **Generic title:** The site may not provide reliable video metadata. Watchwise does not guess a title from unrelated page text.
 

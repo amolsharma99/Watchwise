@@ -2,7 +2,6 @@
 store-local/manifest.json|manifest.json
 store-local/background.js|background.js
 store-local/content.js|content.js
-store-local/studio-handoff.js|studio-handoff.js
 store-local/lib/storage.js|lib/storage.js
 store-local/lib/settings.js|lib/settings.js
 store-local/lib/nudges.js|lib/nudges.js

@@ -1,6 +1,6 @@
 # Watchwise for Chrome
 
-Watchwise is a Chrome Manifest V3 side-panel extension for intentional video viewing. It tracks visible HTML5 video playback locally, offers restrained nudges, shows daily/weekly insights and provides a user-initiated Gemini AI Studio handoff for public YouTube videos. Optional Gemini API analysis can also run automatically with consent and a saved key.
+Watchwise is a Chrome Manifest V3 side-panel extension for intentional video viewing. It tracks visible HTML5 video playback locally, offers restrained nudges, and shows daily/weekly insights. Optional Gemini API analysis can also run automatically with consent and a saved key.
 
 The enduring product and UX direction for future changes is in [AGENTS.md](AGENTS.md).
 
@@ -27,32 +27,20 @@ Chrome local extension storage is access-isolated from content scripts but is no
 3. Choose **Load unpacked** and select this `ChromeExtension` directory.
 4. Pin Watchwise if desired, then click its toolbar icon to open the side panel.
 5. Review the HTTPS access disclosure and choose whether to enable local tracking.
-6. Optional: enable Gemini API analysis and save your Gemini API key in Settings. New visible, active public YouTube videos are then analysed automatically unless you turn automatic analysis off. The separate **Summarise in Gemini AI Studio** action on YouTube does not require the key.
+6. Optional: enable Gemini API analysis and save your Gemini API key in Settings. New visible, active public YouTube videos are then analysed automatically unless you turn automatic analysis off.
 
-### Updating the unpacked build to v0.3.16
+### Updating the unpacked build to v0.3.17
 
 1. Open `chrome://extensions`, find Watchwise and click **Reload** on its card.
 2. Close any open Watchwise side panel, then reopen it from the toolbar icon.
-3. Verify the header reads **v0.3.16**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
+3. Verify the header reads **v0.3.17**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
 4. Reload any already-open YouTube or Netflix video tabs once. This clears an older content-script instance that Chrome may have invalidated during an extension reload.
 
 Version 0.3.9 makes the 15-second goal check-in commit only after the in-page toast confirms it was appended. Goal toasts take priority over an unrelated toast cooldown, work inside container-based fullscreen players, and use a durable pending lease with bounded retry after a transient delivery failure. Direct `<video>` or replaced `<iframe>` fullscreen fails closed because extension DOM may not render there; the pending check-in may retry after fullscreen exit. Unverified v0.3.8 goal state is discarded during this upgrade, so a video whose v0.3.8 toast was actually visible may receive one repeat check-in. This release also removes all Chrome/macOS native banners: the alert toggle now controls in-page nudges and analysis-ready toasts only. The v0.3.7 invalidated-context cleanup, v0.3.6 Netflix title extraction and v0.3.5 eligible-tab recovery remain intact. Chrome cannot retroactively repair a content script orphaned by an older extension reload, so existing affected video tabs still need the one-time reload above.
 
 Reloading the unpacked extension does not delete its local history. Use **Delete history** in Watchwise only when you intentionally want a clean test.
 
-Version 0.3.10 brings the Ink & caramel design and eye-play icon to this existing unpacked installation. Each standard YouTube watch page has an **Ask in AI Studio** button. Clicking it copies a concise, video-specific prompt and opens Google AI Studio for you to paste and send. Watchwise does not automate Studio or receive its answer. The button does not appear on Shorts or other YouTube pages and works independently of the optional Gemini API analysis setting.
-
-Version 0.3.11 opens AI Studio's new-chat page directly. The previous root URL could redirect a signed-in user to the Usage dashboard, hiding the prompt box after the clipboard handoff.
-
-Version 0.3.12 calls the action **Summarise in Gemini AI Studio**. After a click, Watchwise opens a new AI Studio chat and places the prepared prompt in its empty composer. You review and press **Run** yourself; Watchwise never submits it or reads the answer. It also tries to copy the prompt as a fallback. The prompt contains only a canonical public YouTube URL and instructions, with no title or viewing history. A short-lived `chrome.storage.session` record is scoped to the new Studio tab, expires after two minutes, and is removed after handling or when the tab closes. The prompt becomes visible to Google's AI Studio page as soon as it is inserted, before you press Run. If Studio changes its composer or already contains text, Watchwise leaves that text untouched and shows a manual-copy fallback.
-
-Version 0.3.13 uses the exact prompt `Summarise the video with topics and bullets for each - {url}` in both the Studio composer and clipboard fallback, with `{url}` replaced by the canonical public YouTube watch URL.
-
-Version 0.3.14 removes the Analyse tab and its manual Gemini API form. The side panel now has Overview and Settings. Automatic Gemini API analysis remains optional; its latest job and result are available under the collapsed **Latest Gemini API analysis** section in Settings. The YouTube **Summarise in Gemini AI Studio** button continues to work independently.
-
-Version 0.3.15 keeps the Studio button at a fixed size after clicking. Brief progress feedback and the rare manual-copy fallback float outside YouTube's action row. A successful Studio opening clears the feedback even if clipboard copying was blocked; returning to the video also clears stale feedback.
-
-Version 0.3.16 additionally clears stale fallback feedback when Chrome restores a video page from its back-forward cache.
+Version 0.3.17 removes the YouTube AI Studio summary shortcut and its handoff code. The side panel continues to have Overview and Settings; optional automatic Gemini API analysis remains under Settings.
 
 ### On-device AI quality trial
 
@@ -62,7 +50,7 @@ The repository retains a source-only Labs/developer trial page for Chrome's Summ
 
 If you choose to run one controlled Gemini API request with your own key:
 
-1. Reload the unpacked extension, reopen the side panel and verify **v0.3.16** in the header.
+1. Reload the unpacked extension, reopen the side panel and verify **v0.3.17** in the header.
 2. Turn **Analyse new YouTube videos automatically** on, enable AI consent, end Movie Mode, and confirm `youtube.com` is not excluded.
 3. Save your own Gemini API key in Watchwise.
 4. Play a new public YouTube watch video in an active tab for at least three seconds. Open **Settings → Latest Gemini API analysis** to see its status or result. Requests may use quota.
@@ -82,10 +70,9 @@ No Chrome profile is modified by the project scripts, and there is no native hos
 - Movie Mode, snooze and quiet hours silence interventions; local accounting continues while tracking remains enabled.
 - After 15 seconds of plausible positive media progress while the video is visible and its tab/window are active, Watchwise may show a short goal check-in. Its wording varies by broad context such as a tutorial title, a recent run of videos, or a streaming site, with at most one emoji and a clear invitation to leave an unhelpful video. It never repeats the raw video title or a watched-minute count in the toast. Seek jumps, paused/hidden playback, separate tabs and viewing episodes more than 30 seconds apart do not combine toward the threshold. YouTube watch/embed/Shorts/Live forms for the same video deduplicate across frames and player replacements; generic sites use the validated session.
 - The goal check-in is processed at most once per video identity in 24 hours and keeps only the latest 200 processed identities. A 60-second anti-spam gap applies across goal and existing nudges. A distinct video blocked only by that brief gap remains pending while actively playing and may check in after the gap; a video suppressed by tracking/in-page-alert settings, Movie Mode, snooze, quiet hours or either frame/page exclusion is marked processed and never backfilled later. This check-in is in-page only. There is no background alarm for this feature.
-- With AI consent and a saved key, automatic API analysis starts only after a validated public YouTube video accumulates at least three seconds of visible, active playback. It is enabled by default and can be turned off independently of the Studio handoff.
+- With AI consent and a saved key, automatic API analysis starts only after a validated public YouTube video accumulates at least three seconds of visible, active playback. It is enabled by default and can be turned off in Settings.
 - Automatic requests are deduplicated by canonical YouTube video ID using durable IndexedDB jobs/results, so concurrent frames and service-worker restarts do not create repeat paid submissions. Pending remote job IDs resume polling after restarts.
 - Gemini uses stored asynchronous Interactions with the text analysis instructions followed by the public video and a structured JSON response. A narrowly detected background-mode incompatibility gets one synchronous fallback under the same durable job; authentication, quota, invalid-request and other failures are never generically retried.
-- The **Summarise in Gemini AI Studio** button on standard YouTube watch pages remains available when automatic API analysis is disabled.
 - Nudges and analysis-ready alerts are in-page toasts only; Watchwise requests no native-notification permission. If the saved source tab has closed or cannot receive the toast, a completed analysis remains durable and visible in the side panel, but Watchwise sends no out-of-browser alert.
 - Exports contain viewing history, analysis jobs/results and safe settings; never the API key.
 

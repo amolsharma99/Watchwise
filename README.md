@@ -6,7 +6,7 @@
 
 [Try Watchwise](#try-watchwise) · [Suggest a feature](https://github.com/amolsharma99/Watchwise/issues/new?template=feature_request.yml) · [Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/amolsharma99/Watchwise/issues/new?template=bug_report.yml)
 
-> **Latest source: v0.4.1.** You can install it locally now. The current source has features beyond the submitted Store package; a verified public install link will be added when available.
+> **Latest source: v0.4.2.** You can install it locally now. A verified public install link will be added when available.
 
 ## Try Watchwise
 
@@ -43,19 +43,13 @@ Long sessions, several videos in a row, and reaching your daily viewing target c
 
 ![Watchwise interruption controls interface preview with Movie Mode, snooze, and quiet hours](docs/readme/controls-ink-caramel.svg)
 
-## Summarise a YouTube video in AI Studio
-
-On a standard YouTube watch page, **Ask in AI Studio** copies `Summarise the video with topics and bullets for each - {url}` with the video's public URL, then opens a new AI Studio chat. You choose whether to paste and send it. Watchwise does not receive the answer or require an API key for this shortcut. It stays off Shorts, feeds, and embeds.
-
-The separate [experimental build](ChromeExtension) can prepare that prompt in Studio for you. It also offers optional automatic Gemini API analysis with your own key and explicit consent. That analysis may use paid quota and can suggest key moments, possible skips, or whether a video seems information-rich; its verdict is an AI interpretation, not a fact check. The latest status or result appears in **Settings → Latest Gemini API analysis**. This experimental build is not the Store submission.
-
 ## Your history stays yours
 
 Tracking starts **off**. When you opt in, Watchwise keeps eligible video URLs, title metadata, playback events, and settings in encrypted local storage in your Chrome profile. There is no Watchwise account, developer analytics service, or advertising. You can export history as JSON, delete it, or stop tracking. Exported JSON is plaintext, so keep the downloaded file private. Playback events older than 180 days are removed automatically.
 
 ![Watchwise data controls interface preview with site exclusions, export, and deletion](docs/readme/data-ink-caramel.svg)
 
-Watchwise requests HTTPS site access to detect videos across websites and embedded frames. It does not record screen pixels, audio, captions, forms, passwords, cookies, or arbitrary page text. The [Store privacy policy](store/PRIVACY.md) describes the package submitted for review; the AI Studio shortcut shown here is in the newer source build.
+Watchwise requests HTTPS site access to detect videos across websites and embedded frames. It does not record screen pixels, audio, captions, forms, passwords, cookies, or arbitrary page text. The [Store privacy policy](store/PRIVACY.md) describes the package submitted for review.
 
 ## Where it works
 
@@ -84,7 +78,6 @@ For the experimental build:
 ```sh
 /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc -m ChromeExtension/tests/run.mjs
 ruby ChromeExtension/tests/integration_check.rb
-ruby ChromeExtension/tests/run_studio_handoff_jsc.rb
 ```
 
 See [Chrome architecture](CHROME_ARCHITECTURE.md), [security notes](SECURITY.md), and the [release plan](RELEASE_PLAN.md) for implementation and publication details. The older Swift Mac app and browser bridge remain as legacy source; neither is needed for the Chrome extension.

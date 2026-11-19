@@ -7,8 +7,6 @@ require "timeout"
 
 root = File.expand_path("..", __dir__)
 packager = File.join(root, "scripts", "package_local_store.rb")
-studio_policy = File.read(File.join(root, "store-local", "background.js"))[/function standardYouTubeWatchID\(input\) \{.*?\n\}/m]
-abort "Studio sender policy helper missing" unless studio_policy
 chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 abort "Google Chrome is unavailable" unless File.executable?(chrome)
 
@@ -26,13 +24,6 @@ Dir.mktmpdir("watchwise-local-chrome") do |workspace|
       } from "./lib/storage.js";
       const result = document.querySelector("#result");
       const check = (value, message) => { if (!value) throw new Error(message); };
-      #{studio_policy}
-      check(standardYouTubeWatchID("https://www.youtube.com/watch?x=1&v=abc") === "abc", "valid watch URL rejected");
-      check(standardYouTubeWatchID("https://www.youtube.com/watch?x=v=abc") === null, "nested v parameter accepted");
-      check(standardYouTubeWatchID("https://www.youtube.com/watch?v=abc&v=def") === null, "ambiguous duplicate video IDs accepted");
-      check(standardYouTubeWatchID("https://notyoutube.com/watch?v=abc") === null, "lookalike host accepted");
-      check(standardYouTubeWatchID("https://www.youtube.com/shorts/abc") === null, "Short accepted as a standard watch page");
-      check(standardYouTubeWatchID("https://www.youtube.com/watch?v=abc") !== standardYouTubeWatchID("https://www.youtube.com/watch?v=def"), "navigation-before-open mismatch was not distinguishable");
       const request = (value) => new Promise((resolve, reject) => { value.onsuccess = () => resolve(value.result); value.onerror = () => reject(value.error); });
       const transactionDone = (value) => new Promise((resolve, reject) => { value.oncomplete = resolve; value.onerror = () => reject(value.error); value.onabort = () => reject(value.error); });
       const rejected = async (operation, message) => { try { await operation(); } catch { return; } throw new Error(message); };

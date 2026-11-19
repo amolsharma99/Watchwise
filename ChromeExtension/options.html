@@ -11,9 +11,8 @@
       <label><span><strong>In-page alerts</strong><small>Nudges and completed-analysis toasts in video tabs</small></span><input id="notifications" type="checkbox" role="switch"></label>
       <label><span><strong>Allow Gemini analysis</strong><small>Public YouTube video URLs; requires your saved Gemini API key</small></span><input id="ai" type="checkbox" role="switch"></label>
       <p>With AI consent, Watchwise sends the public YouTube URL and analysis instructions directly to Google Gemini using your saved key, and requests may consume your quota. The key stays in local extension storage except when it is sent over HTTPS to Google for an analysis you allowed.</p>
-      <p>On a standard YouTube video, <strong>Summarise in Gemini AI Studio</strong> is a separate, user-initiated action. It opens a new Studio chat and inserts a prepared prompt containing the public video URL. You review and press Run; Watchwise does not submit it or read the result. Google’s Studio page can access the prompt once inserted.</p>
       <label><span><strong>Analyse new YouTube videos automatically</strong><small>On by default after AI consent; each new video may use paid Gemini API quota</small></span><input id="autoAnalysis" type="checkbox" role="switch"></label>
-      <p>Automatic analysis starts only for a visible, active public YouTube video when playback begins. It is paused by Movie Mode, exclusions, missing AI consent, or a missing API key. Watchwise deduplicates each video locally; the separate Studio button remains available when this is off.</p>
+      <p>Automatic analysis starts only for a visible, active public YouTube video when playback begins. It is paused by Movie Mode, exclusions, missing AI consent, or a missing API key. Watchwise deduplicates each video locally.</p>
     </section>
     <section>
       <h2>Open the dashboard</h2>

@@ -2,8 +2,6 @@
 manifest.json
 background.js
 content.js
-studio-handoff.js
-studio-prefill.js
 lib/analysis.js
 lib/auto-analysis.js
 lib/gemini-protocol.js

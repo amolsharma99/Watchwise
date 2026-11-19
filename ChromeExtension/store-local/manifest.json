@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Watchwise",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "minimum_chrome_version": "116",
   "description": "Private, intentional video-watching insights and local nudges.",
   "permissions": [
@@ -36,12 +36,6 @@
       "matches": ["https://*/*"],
       "js": ["content.js"],
       "all_frames": true,
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://youtube.com/*", "https://*.youtube.com/*"],
-      "js": ["studio-handoff.js"],
-      "all_frames": false,
       "run_at": "document_idle"
     }
   ],
