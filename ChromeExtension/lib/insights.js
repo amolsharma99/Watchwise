@@ -158,7 +158,7 @@ export function summarizeViewing(events, window, options = {}) {
     const latest = stream[stream.length - 1];
     const nowMs = options.nowMs;
     const freshnessMs = options.freshnessMs ?? 30_000;
-    if (Number.isFinite(nowMs) && PLAYING_STATES.has(latest.state) && latest.isVisible && latest.isTabActive && nowMs >= latest.occurredAtMs && nowMs - latest.occurredAtMs <= freshnessMs) {
+    if (Number.isFinite(nowMs) && (typeof options.allowLiveTail !== "function" || options.allowLiveTail(latest)) && PLAYING_STATES.has(latest.state) && latest.isVisible && latest.isTabActive && nowMs >= latest.occurredAtMs && nowMs - latest.occurredAtMs <= freshnessMs) {
       const interval = clip(latest.occurredAtMs, Math.min(nowMs, latest.occurredAtMs + freshnessMs), window);
       if (interval) {
         addInterval(latest.pageSite, interval);

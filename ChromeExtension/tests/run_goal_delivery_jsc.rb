@@ -55,7 +55,7 @@ fixture = <<~JAVASCRIPT
   const toast = normal.calls.filter((call) => call.kind === "tab" && call.message.type === "SHOW_TOAST");
   const notice = normal.calls.filter((call) => call.kind === "notification");
   assertDelivery(toast.length === 1 && notice.length === 0, "goal delivery was not exactly one in-page toast with no native notification");
-  assertDelivery(toast[0].message.text === dynamicMessage && toast[0].message.priority === "goal_checkin" && Object.keys(toast[0].message).length === 3, "toast body/priority did not preserve the chosen goal message");
+  assertDelivery(toast[0].message.text === dynamicMessage && toast[0].message.priority === "goal_checkin" && toast[0].message.allowWorkExclusion === true && Object.keys(toast[0].message).length === 4, "toast body/priority did not preserve the chosen goal message and work exclusion");
 
   const suppressed = mockBrowser();
   assertDelivery(!(await deliverGoalCheckIn({ browser: suppressed, event, isAllowed: async () => false })), "suppressed delivery reported success");

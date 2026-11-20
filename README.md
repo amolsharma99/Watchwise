@@ -6,7 +6,7 @@
 
 [Try Watchwise](#try-watchwise) · [Suggest a feature](https://github.com/amolsharma99/Watchwise/issues/new?template=feature_request.yml) · [Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/amolsharma99/Watchwise/issues/new?template=bug_report.yml)
 
-> **Latest source: v0.4.2.** You can install it locally now. A verified public install link will be added when available.
+> **Latest source: v0.4.3.** You can install it locally now. A verified public install link will be added when available.
 
 ## Try Watchwise
 
@@ -28,6 +28,8 @@ The side panel shows today's time and starts, a weekly snapshot, and **Top sites
 ## A nudge at the right moment
 
 After about 15 seconds of actual playback, Watchwise can place a small translucent check-in on the page. It asks you to remember why you pressed play. The wording can change with the site, video title, and recent viewing pattern. A seek jump does not count toward the timer, and the goal check-in appears at most once for the same video in 24 hours, with a gap between interruptions.
+
+If a video belongs to your work, click **This is work** on the nudge. Watchwise adds the website shown in the address bar to **Settings → Excluded sites** and stops tracking time and showing nudges there from that point on. You can remove it from the list later. Earlier viewing history remains in your insights until you delete it.
 
 ![Watchwise in-page nudge interface preview with playful check-ins](docs/readme/nudges-ink-caramel.svg)
 

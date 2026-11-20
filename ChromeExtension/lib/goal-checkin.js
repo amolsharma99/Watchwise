@@ -257,7 +257,7 @@ export async function deliverGoalCheckIn({ browser, event, isAllowed, message = 
   if (!(await isAllowed())) return false;
   let toastDelivered = false;
   try {
-    const response = await browser.tabs.sendMessage(event.tabID, { type: "SHOW_TOAST", text: message, priority: "goal_checkin" }, { frameId: event.frameID });
+    const response = await browser.tabs.sendMessage(event.tabID, { type: "SHOW_TOAST", text: message, priority: "goal_checkin", allowWorkExclusion: true }, { frameId: event.frameID });
     toastDelivered = response?.shown === true;
   } catch {}
   if (!toastDelivered) return false;

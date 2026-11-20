@@ -220,9 +220,25 @@ fixture = <<~JAVASCRIPT
   runtimeListener({ type: "SHOW_TOAST", text: "Too soon" }, {}, (response) => { cooledToast = response; });
   assertRecovery(cooledToast?.shown === false, "ordinary toast cooldown returned a false-positive acknowledgement");
   let goalToast = null;
-  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin", actionLabel: "Open", action: { type: "open_panel" } }, {}, (response) => { goalToast = response; });
+  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin", allowWorkExclusion: true, actionLabel: "Open", action: { type: "open_panel" } }, {}, (response) => { goalToast = response; });
   assertRecovery(goalToast?.shown === true, "goal toast did not bypass the unrelated toast cooldown");
   assertRecovery(fullscreenRoot.children.some((node) => node.id === "watchwise-toast-host"), "toast was not appended inside the fullscreen element");
+  const workAction = createdElements.filter((node) => node.className === "work").at(-1);
+  const workToast = createdElements.filter((node) => node.id === "watchwise-toast-host").at(-1);
+  assertRecovery(workAction?.textContent === "This is work" && typeof workAction.listeners.click === "function", "goal toast is missing its work exclusion button");
+  workAction.listeners.click();
+  for (let index = 0; index < 6; index += 1) await Promise.resolve();
+  assertRecovery(messages.some((message) => message.type === "TOAST_ACTION" && message.action?.type === "exclude_current_site"), "work button did not request current-site exclusion");
+  assertRecovery(workToast.removed === true, "successful work exclusion left the nudge visible");
+
+  runtimeListener({ type: "SHOW_TOAST", text: "Goal", priority: "goal_checkin", allowWorkExclusion: true }, {}, () => {});
+  const retryWorkAction = createdElements.filter((node) => node.className === "work").at(-1);
+  const retryWorkToast = createdElements.filter((node) => node.id === "watchwise-toast-host").at(-1);
+  sendMode = "reject_transient";
+  retryWorkAction.listeners.click();
+  for (let index = 0; index < 6; index += 1) await Promise.resolve();
+  assertRecovery(retryWorkToast.removed !== true && retryWorkAction.disabled === false, "failed exclusion silently dismissed the nudge");
+  sendMode = "normal";
 
   class ThrowingFullscreenRoot extends Element { append() { throw new Error("fullscreen append failed"); } }
   document.fullscreenElement = new ThrowingFullscreenRoot("fullscreen");

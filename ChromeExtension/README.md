@@ -29,18 +29,18 @@ Chrome local extension storage is access-isolated from content scripts but is no
 5. Review the HTTPS access disclosure and choose whether to enable local tracking.
 6. Optional: enable Gemini API analysis and save your Gemini API key in Settings. New visible, active public YouTube videos are then analysed automatically unless you turn automatic analysis off.
 
-### Updating the unpacked build to v0.3.17
+### Updating the unpacked build to v0.3.18
 
 1. Open `chrome://extensions`, find Watchwise and click **Reload** on its card.
 2. Close any open Watchwise side panel, then reopen it from the toolbar icon.
-3. Verify the header reads **v0.3.17**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
+3. Verify the header reads **v0.3.18**. If it shows an older version or an update warning, close the panel and reload the extension again before testing.
 4. Reload any already-open YouTube or Netflix video tabs once. This clears an older content-script instance that Chrome may have invalidated during an extension reload.
 
 Version 0.3.9 makes the 15-second goal check-in commit only after the in-page toast confirms it was appended. Goal toasts take priority over an unrelated toast cooldown, work inside container-based fullscreen players, and use a durable pending lease with bounded retry after a transient delivery failure. Direct `<video>` or replaced `<iframe>` fullscreen fails closed because extension DOM may not render there; the pending check-in may retry after fullscreen exit. Unverified v0.3.8 goal state is discarded during this upgrade, so a video whose v0.3.8 toast was actually visible may receive one repeat check-in. This release also removes all Chrome/macOS native banners: the alert toggle now controls in-page nudges and analysis-ready toasts only. The v0.3.7 invalidated-context cleanup, v0.3.6 Netflix title extraction and v0.3.5 eligible-tab recovery remain intact. Chrome cannot retroactively repair a content script orphaned by an older extension reload, so existing affected video tabs still need the one-time reload above.
 
 Reloading the unpacked extension does not delete its local history. Use **Delete history** in Watchwise only when you intentionally want a clean test.
 
-Version 0.3.17 removes the YouTube AI Studio summary shortcut and its handoff code. The side panel continues to have Overview and Settings; optional automatic Gemini API analysis remains under Settings.
+Version 0.3.18 adds **This is work** to in-page nudges. It excludes the current website from future tracking and nudges, and the site can be removed in Settings. The side panel continues to have Overview and Settings; optional automatic Gemini API analysis remains under Settings.
 
 ### On-device AI quality trial
 
@@ -50,7 +50,7 @@ The repository retains a source-only Labs/developer trial page for Chrome's Summ
 
 If you choose to run one controlled Gemini API request with your own key:
 
-1. Reload the unpacked extension, reopen the side panel and verify **v0.3.17** in the header.
+1. Reload the unpacked extension, reopen the side panel and verify **v0.3.18** in the header.
 2. Turn **Analyse new YouTube videos automatically** on, enable AI consent, end Movie Mode, and confirm `youtube.com` is not excluded.
 3. Save your own Gemini API key in Watchwise.
 4. Play a new public YouTube watch video in an active tab for at least three seconds. Open **Settings → Latest Gemini API analysis** to see its status or result. Requests may use quota.

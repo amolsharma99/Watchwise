@@ -310,7 +310,7 @@
     const style = document.createElement("style");
     style.textContent = `
       .toast{box-sizing:border-box;width:min(340px,calc(100vw - 40px));padding:14px 15px;border:1px solid rgba(234,211,185,.24);border-radius:16px;background:rgba(37,36,32,.92);box-shadow:0 14px 48px rgba(0,0,0,.28);backdrop-filter:blur(18px);color:#faf7f1;font:500 14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:auto}
-      .brand{color:#d4a16f;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.message{margin:5px 0 11px}.actions{display:flex;gap:8px;justify-content:flex-end}button{border:0;border-radius:9px;padding:7px 10px;font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}button.primary{background:#d1a16d;color:#211b15}button.quiet{background:rgba(255,255,255,.10);color:#faf7f1}button:focus-visible{outline:2px solid #d4a16f;outline-offset:2px}
+      .brand{color:#d4a16f;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.message{margin:5px 0 11px}.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}button{border:0;border-radius:9px;padding:7px 10px;font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}button.primary{background:#d1a16d;color:#211b15}button.work{background:rgba(209,161,109,.22);color:#f5ce9e}button.quiet{background:rgba(255,255,255,.10);color:#faf7f1}button:disabled{opacity:.65;cursor:wait}button:focus-visible{outline:2px solid #d4a16f;outline-offset:2px}
     `;
     const toast = document.createElement("section");
     toast.className = "toast";
@@ -333,6 +333,22 @@
         host.remove();
       });
       actions.append(action);
+    }
+    if (message.allowWorkExclusion === true) {
+      const work = document.createElement("button");
+      work.className = "work";
+      work.textContent = "This is work";
+      work.title = "Exclude this website from tracking and nudges";
+      work.addEventListener("click", async () => {
+        work.disabled = true;
+        const response = await sendRuntimeMessage({ type: "TOAST_ACTION", action: { type: "exclude_current_site" } });
+        if (response?.ok === true) host.remove();
+        else {
+          work.disabled = false;
+          text.textContent = "Could not exclude this website. Try again in Watchwise Settings.";
+        }
+      });
+      actions.append(work);
     }
     const dismiss = document.createElement("button");
     dismiss.className = "quiet";

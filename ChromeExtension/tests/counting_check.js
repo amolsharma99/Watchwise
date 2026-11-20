@@ -24,6 +24,10 @@
     });
   }
   const window = { startMs: BASE_COUNTING, endMs: BASE_COUNTING + 120_000 };
+  const workEvent = countingEvent({ eventID: "work-active", sessionID: "work-session", playerID: "work-player", frameSite: "work.example", pageSite: "work.example", url: "https://work.example/video", mediaTitle: "Work video" });
+  const liveBeforeExclusion = summarizeViewing([workEvent], window, { nowMs: BASE_COUNTING + 10_000 });
+  const liveAfterExclusion = summarizeViewing([workEvent], window, { nowMs: BASE_COUNTING + 10_000, allowLiveTail: (event) => event.pageSite !== "work.example" });
+  assertCounting(liveBeforeExclusion.activeSeconds === 10 && liveAfterExclusion.activeSeconds === 0, "excluded work site kept accruing optimistic viewing time");
   const youtubeForms = [
     "https://www.youtube.com/watch?v=abc",
     "https://www.youtube.com/embed/abc",

@@ -17,7 +17,7 @@ Dir.mktmpdir("watchwise-local-check") do |stage|
   stage = production
 
   manifest = JSON.parse(File.read(File.join(stage, "manifest.json")))
-  assert(manifest["version"] == "0.4.2", "wrong local Store version")
+  assert(manifest["version"] == "0.4.3", "wrong local Store version")
   assert(manifest["permissions"] == %w[scripting sidePanel], "local permissions are not minimal")
   assert(!manifest.fetch("permissions", []).include?("alarms"), "alarm permission leaked")
   assert(manifest["host_permissions"] == ["https://*/*"], "wrong host scope")
@@ -53,6 +53,8 @@ Dir.mktmpdir("watchwise-local-check") do |stage|
   assert(background.include?('CONTENT_LIFECYCLE = "watchwise-tracker-v0.3.9"'), "local update would reject healthy shared tracker")
   assert(background.include?("recoverExistingContentScripts") && background.include?("recoverContentScriptInTab"), "content recovery missing")
   assert(background.include?("maybeGoalCheckIn") && background.include?("maybeNudge"), "local interventions missing")
+  assert(background.include?('message.action?.type === "exclude_current_site"') && background.include?("excludeCurrentSiteFromToast(sender)"), "work exclusion action is not routed")
+  assert(File.read(File.join(stage, "content.js")).include?("This is work"), "work exclusion button is missing from the public toast")
   assert(background.include?("maybePrune") && !background.include?("onAlarm"), "retention is not initialization/opportunistic only")
   assert(background.include?("try { await maybePrune(Date.now()); } catch {}") && background.include?("void maybePrune().catch(() => {});"), "corrupt history can block initialization or later ingestion")
   assert(background.match?(/case "DELETE_HISTORY".*?repository\.deleteAll\(\).*?\[NUDGE_STATE_KEY\]: \{\}, \[GOAL_CHECK_STATE_KEY\]: \{\}/m), "corruption-tolerant delete does not clear event/intervention history")

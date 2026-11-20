@@ -17,6 +17,8 @@ The side panel has **Overview** and **Settings**. Overview shows active watching
 
 With alerts on, a translucent goal check-in can appear after about 15 seconds of actual visible playback. Seeking ahead does not count as watched time. Messages vary with the site, title, and recent viewing pattern, and the goal check-in is limited to once per video identity in 24 hours with a short gap between interruptions. Movie Mode, snooze, quiet hours, site exclusions, or switching alerts off will silence them. Movie Mode keeps tracking on.
 
+Click **This is work** on a nudge to exclude the website in the address bar. Future playback time and nudges stop on that site, including its embedded videos. The site appears in **Settings → Excluded sites**, where you can remove it later. Time already recorded stays in your history.
+
 ![Demonstration of an in-page goal check-in](store/screenshots/03-goal-checkin.png)
 
 ## Optional automatic Gemini API analysis

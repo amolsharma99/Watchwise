@@ -253,6 +253,27 @@ async function clearInterventions() {
   await Promise.allSettled(tabs.map((tab) => chrome.tabs.sendMessage(tab.id, { type: "HIDE_TOAST" })));
 }
 
+async function clearInterventionsForSite(site) {
+  const tabs = await chrome.tabs.query({ url: "https://*/*" });
+  await Promise.allSettled(tabs.filter((tab) => {
+    try { return isExcludedSite(normalizeHostname(new URL(tab.url).hostname), { excludedSites: [site] }); } catch { return false; }
+  }).map((tab) => chrome.tabs.sendMessage(tab.id, { type: "HIDE_TOAST" })));
+}
+
+async function excludeCurrentSiteFromToast(sender) {
+  if (sender?.id !== chrome.runtime.id) throw new TypeError("extension content sender required");
+  const site = frameContext(sender).pageSite;
+  await withDataMutation(async () => {
+    const current = await getSettings();
+    if (isExcludedSite(site, current)) return;
+    const settings = normalizeSettings({ ...current, excludedSites: [...current.excludedSites, site] });
+    settingsRevision += 1;
+    await localSet({ [SETTINGS_KEY]: settings });
+  });
+  await Promise.allSettled([broadcastTrackingState(), clearInterventionsForSite(site), announceDashboardUpdated({ immediate: true })]);
+  return { ok: true, site };
+}
+
 function deliverDashboardUpdate() {
   lastDashboardUpdateAtMs = Date.now();
   return chrome.runtime.sendMessage({ type: "DASHBOARD_UPDATED" }).catch(() => {});
@@ -455,6 +476,7 @@ async function maybeNudge(event, generation = historyGeneration) {
     await chrome.tabs.sendMessage(event.tabID, {
       type: "SHOW_TOAST",
       text: `${nudge.title} ${nudge.message}`,
+      allowWorkExclusion: true,
       actionLabel: "Open Watchwise",
       action: { type: "open_panel" }
     }, { frameId: event.frameID });
@@ -468,6 +490,7 @@ async function maybeNudge(event, generation = historyGeneration) {
 async function getDashboardState() {
   const nowMs = Date.now();
   const settings = await getSettings();
+  const insightOptions = { nowMs, allowLiveTail: (event) => !isExcludedSite(event.pageSite, settings) };
   const todayRange = dayWindow(nowMs);
   const weekRange = weekWindow(nowMs);
   const previousWeek = { startMs: weekRange.startMs - (weekRange.endMs - weekRange.startMs), endMs: weekRange.startMs };
@@ -481,8 +504,8 @@ async function getDashboardState() {
     extensionVersion: chrome.runtime.getManifest().version,
     onboardingComplete: stored[ONBOARDING_KEY] === true,
     settings,
-    today: summarizeViewing(events, todayRange, { nowMs }),
-    week: summarizeViewing(events, weekRange, { nowMs }),
+    today: summarizeViewing(events, todayRange, insightOptions),
+    week: summarizeViewing(events, weekRange, insightOptions),
     previousWeekActiveSeconds: summarizeViewing(events, previousWeek).activeSeconds,
     trackingConnection: await activeTabTrackingConnection(activeTab, settings)
   };
@@ -561,6 +584,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (message?.type === "PLAYBACK_EVENT") return { ok: true, ...(await ingestPlayback(message.event, sender)) };
     if (message?.type === "TOAST_ACTION") {
+      if (message.action?.type === "exclude_current_site") return excludeCurrentSiteFromToast(sender);
       if (message.action?.type === "open_panel") await openPanel();
       else throw new TypeError("invalid toast action");
       return { ok: true };

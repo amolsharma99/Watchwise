@@ -57,7 +57,7 @@ end
 def validate_stage!(stage, archive_files)
   manifest = JSON.parse(File.read(File.join(stage, "manifest.json")))
   fail!("Manifest V3 required") unless manifest["manifest_version"] == 3
-  fail!("local Store version must be 0.4.2") unless manifest["version"] == "0.4.2"
+  fail!("local Store version must be 0.4.3") unless manifest["version"] == "0.4.3"
   fail!("minimum Chrome 116 required") unless manifest["minimum_chrome_version"] == "116"
   fail!("permissions must be exactly scripting, sidePanel") unless manifest["permissions"] == %w[scripting sidePanel]
   fail!("host permission must be exactly https://*/*") unless manifest["host_permissions"] == ["https://*/*"]
